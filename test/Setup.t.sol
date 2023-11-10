@@ -3,6 +3,7 @@ pragma solidity >=0.8.20;
 
 /// library imports
 import {Test, Vm} from "forge-std/Test.sol";
+import "forge-std/console.sol";
 
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
 
@@ -20,7 +21,7 @@ import {AxelarReceiverAdapter} from "src/adapters/axelar/AxelarReceiverAdapter.s
 import {GAC} from "src/controllers/GAC.sol";
 import {MessageSenderGAC} from "src/controllers/MessageSenderGAC.sol";
 import {MessageReceiverGAC} from "src/controllers/MessageReceiverGAC.sol";
-import {xERC20} from "src/xERC20.sol";
+import {xERC20} from "src/token/xERC20.sol";
 
 import {MultiBridgeMessageSender} from "src/MultiBridgeMessageSender.sol";
 import {MultiBridgeMessageReceiver} from "src/MultiBridgeMessageReceiver.sol";
@@ -41,8 +42,6 @@ abstract contract Setup is Test {
     uint256 constant SRC_CHAIN_ID = ETHEREUM_CHAIN_ID;
     uint256 constant DST_CHAIN_ID = POLYGON_CHAIN_ID;
 
-    /// @dev simulated caller
-    address constant caller = address(10);
     address constant owner = address(420);
     address constant refundAddress = address(420420);
     uint256 constant EXPIRATION_CONSTANT = 5 days;
@@ -78,20 +77,26 @@ abstract contract Setup is Test {
         POLYGON_CHAIN_ID
     ];
 
-    /// @notice configure any new dst chains here
-    uint256[] public DST_CHAINS = [BSC_CHAIN_ID, POLYGON_CHAIN_ID];
-
     /// @notice configure all wormhole parameters in order of DST_CHAINS
-    address[] public WORMHOLE_RELAYERS = [BSC_RELAYER, POLYGON_RELAYER];
-    uint16[] public WORMHOLE_CHAIN_IDS = [4, 5];
+    address[] public WORMHOLE_RELAYERS = [
+        ETH_RELAYER,
+        BSC_RELAYER,
+        POLYGON_RELAYER
+    ];
+    uint16[] public WORMHOLE_CHAIN_IDS = [2, 4, 5];
 
     /// @notice configure all axelar parameters in order of DST_CHAINS
-    address[] public AXELAR_GATEWAYS = [BSC_GATEWAY, POLYGON_GATEWAY];
+    address[] public AXELAR_GATEWAYS = [
+        ETH_GATEWAY,
+        BSC_GATEWAY,
+        POLYGON_GATEWAY
+    ];
     address[] public AXELAR_GAS_SERVICES = [
+        ETH_GAS_SERVICE,
         BSC_GAS_SERVICE,
         POLYGON_GAS_SERVICE
     ];
-    string[] public AXELAR_CHAIN_IDS = ["binance", "polygon"];
+    string[] public AXELAR_CHAIN_IDS = ["ethereum", "binance", "polygon"];
 
     /// @dev maps the local chain id to a fork id
     mapping(uint256 => uint256) public fork;
@@ -110,15 +115,16 @@ abstract contract Setup is Test {
         fork[ETHEREUM_CHAIN_ID] = vm.createSelectFork(
             vm.envString("ETH_FORK_URL")
         );
-        vm.deal(caller, 100 ether);
+
+        deal(owner, 500 ether);
 
         fork[BSC_CHAIN_ID] = vm.createSelectFork(vm.envString("BSC_FORK_URL"));
-        vm.deal(caller, 100 ether);
+        vm.deal(owner, 500 ether);
 
         fork[POLYGON_CHAIN_ID] = vm.createSelectFork(
             vm.envString("POLYGON_FORK_URL")
         );
-        vm.deal(caller, 100 ether);
+        vm.deal(owner, 500 ether);
 
         /// @dev deploys controller contract to all chains
         _deployGac();
@@ -153,54 +159,43 @@ abstract contract Setup is Test {
             uint256 chainId = ALL_CHAINS[i];
             vm.selectFork(fork[chainId]);
 
-            address gac;
-            if (chainId == SRC_CHAIN_ID) {
-                MessageSenderGAC senderGAC = new MessageSenderGAC{
-                    salt: _salt
-                }();
-                gac = address(senderGAC);
-            } else {
-                MessageReceiverGAC receiverGAC = new MessageReceiverGAC{
-                    salt: _salt
-                }();
-                gac = address(receiverGAC);
-            }
-            contractAddress[chainId][bytes("GAC")] = address(gac);
+            contractAddress[chainId][bytes("SENDER_GAC")] = address(
+                new MessageSenderGAC{salt: _salt}()
+            );
+            contractAddress[chainId][bytes("RECEIVER_GAC")] = address(
+                new MessageReceiverGAC{salt: _salt}()
+            );
 
             unchecked {
                 ++i;
             }
         }
+        vm.stopPrank();
     }
 
     /// @dev deploys the wormhole adapters to all configured chains
     function _deployWormholeAdapters() internal {
-        /// @notice deploy source adapter to SRC_CHAIN (ETH)
-        vm.selectFork(fork[SRC_CHAIN_ID]);
-
-        contractAddress[SRC_CHAIN_ID][
-            bytes("WORMHOLE_SENDER_ADAPTER")
-        ] = address(
-            new WormholeSenderAdapter{salt: _salt}(
-                ETH_RELAYER,
-                contractAddress[SRC_CHAIN_ID][bytes("GAC")]
-            )
-        );
-
-        uint256 len = DST_CHAINS.length;
+        uint256 len = ALL_CHAINS.length;
 
         /// @notice deploy receiver adapters to all DST_CHAINS
         address[] memory _receiverAdapters = new address[](len);
 
-        uint16 srcChainId = _wormholeChainId(SRC_CHAIN_ID);
         for (uint256 i; i < len; ) {
-            uint256 chainId = DST_CHAINS[i];
+            uint256 chainId = ALL_CHAINS[i];
             vm.selectFork(fork[chainId]);
 
+            contractAddress[chainId][
+                bytes("WORMHOLE_SENDER_ADAPTER")
+            ] = address(
+                new WormholeSenderAdapter{salt: _salt}(
+                    WORMHOLE_RELAYERS[i],
+                    contractAddress[chainId][bytes("SENDER_GAC")]
+                )
+            );
             address receiverAdapter = address(
                 new WormholeReceiverAdapter{salt: _salt}(
                     WORMHOLE_RELAYERS[i],
-                    contractAddress[chainId][bytes("GAC")]
+                    contractAddress[chainId][bytes("RECEIVER_GAC")]
                 )
             );
             contractAddress[chainId][
@@ -213,46 +208,55 @@ abstract contract Setup is Test {
             }
         }
 
-        /// @dev sets some configs to sender adapter (ETH_CHAIN_ADAPTER)
-        vm.selectFork(fork[SRC_CHAIN_ID]);
+        for (uint256 j; j < len; ++j) {
+            uint256 chainId = ALL_CHAINS[j];
+            /// @dev sets some configs to sender adapter (ETH_CHAIN_ADAPTER)
+            vm.selectFork(fork[chainId]);
+            vm.startPrank(owner);
+            WormholeSenderAdapter(
+                contractAddress[chainId][bytes("WORMHOLE_SENDER_ADAPTER")]
+            ).updateReceiverAdapter(ALL_CHAINS, _receiverAdapters);
 
-        WormholeSenderAdapter(
-            contractAddress[SRC_CHAIN_ID][bytes("WORMHOLE_SENDER_ADAPTER")]
-        ).updateReceiverAdapter(DST_CHAINS, _receiverAdapters);
-
-        WormholeSenderAdapter(
-            contractAddress[SRC_CHAIN_ID][bytes("WORMHOLE_SENDER_ADAPTER")]
-        ).setChainIdMap(DST_CHAINS, WORMHOLE_CHAIN_IDS);
+            WormholeSenderAdapter(
+                contractAddress[chainId][bytes("WORMHOLE_SENDER_ADAPTER")]
+            ).setChainIdMap(ALL_CHAINS, WORMHOLE_CHAIN_IDS);
+            vm.stopPrank();
+        }
     }
 
     /// @dev deploys the axelar adapters to all configured chains
     function _deployAxelarAdapters() internal {
-        /// @notice deploy source adapter to Ethereum
-        vm.selectFork(fork[SRC_CHAIN_ID]);
-        contractAddress[SRC_CHAIN_ID][bytes("AXELAR_SENDER_ADAPTER")] = address(
-            new AxelarSenderAdapter{salt: _salt}(
-                ETH_GAS_SERVICE,
-                ETH_GATEWAY,
-                contractAddress[SRC_CHAIN_ID][bytes("GAC")]
-            )
-        );
-
-        uint256 len = DST_CHAINS.length;
+        console.log("deploying axelar adapters");
+        uint256 len = ALL_CHAINS.length;
 
         /// @notice deploy receiver adapters to all DST_CHAINS
         address[] memory _receiverAdapters = new address[](len);
 
         for (uint256 i; i < len; ) {
-            uint256 chainId = DST_CHAINS[i];
+            uint256 chainId = ALL_CHAINS[i];
             vm.selectFork(fork[chainId]);
+
+            contractAddress[chainId][bytes("AXELAR_SENDER_ADAPTER")] = address(
+                new AxelarSenderAdapter{salt: _salt}(
+                    contractAddress[chainId][bytes("SENDER_GAC")]
+                )
+            );
+
+            vm.prank(owner);
+            AxelarSenderAdapter(
+                contractAddress[chainId][bytes("AXELAR_SENDER_ADAPTER")]
+            ).setAxelarConfig(AXELAR_GAS_SERVICES[i], AXELAR_GATEWAYS[i]);
 
             address receiverAdapter = address(
                 new AxelarReceiverAdapter{salt: _salt}(
-                    AXELAR_GATEWAYS[i],
-                    "ethereum",
-                    contractAddress[chainId][bytes("GAC")]
+                    contractAddress[chainId][bytes("RECEIVER_GAC")]
                 )
             );
+            vm.prank(owner);
+            AxelarReceiverAdapter(receiverAdapter).setAxelarConfig(
+                AXELAR_GATEWAYS[i]
+            );
+
             contractAddress[chainId][
                 bytes("AXELAR_RECEIVER_ADAPTER")
             ] = receiverAdapter;
@@ -263,38 +267,37 @@ abstract contract Setup is Test {
             }
         }
 
-        vm.selectFork(fork[SRC_CHAIN_ID]);
+        for (uint256 j; j < len; ) {
+            uint256 chainId = ALL_CHAINS[j];
+            vm.selectFork(fork[chainId]);
+            vm.startPrank(owner);
 
-        AxelarSenderAdapter(
-            contractAddress[SRC_CHAIN_ID][bytes("AXELAR_SENDER_ADAPTER")]
-        ).updateReceiverAdapter(DST_CHAINS, _receiverAdapters);
+            console.log(
+                contractAddress[chainId][bytes("AXELAR_SENDER_ADAPTER")]
+            );
+            console.log(_receiverAdapters.length);
+            AxelarSenderAdapter(
+                contractAddress[chainId][bytes("AXELAR_SENDER_ADAPTER")]
+            ).updateReceiverAdapter(ALL_CHAINS, _receiverAdapters);
 
-        AxelarSenderAdapter(
-            contractAddress[SRC_CHAIN_ID][bytes("AXELAR_SENDER_ADAPTER")]
-        ).setChainIdMap(DST_CHAINS, AXELAR_CHAIN_IDS);
+            AxelarSenderAdapter(
+                contractAddress[chainId][bytes("AXELAR_SENDER_ADAPTER")]
+            ).setChainIdMap(ALL_CHAINS, AXELAR_CHAIN_IDS);
+            vm.stopPrank();
+
+            unchecked {
+                ++j;
+            }
+        }
+        console.log("deploying axelar adapters complete");
     }
 
     /// @dev deploys the amb helpers to all configured chains
     function _deployHelpers() internal {
-        /// @notice deploy amb helpers to Ethereum
-        vm.selectFork(fork[SRC_CHAIN_ID]);
-        contractAddress[SRC_CHAIN_ID][bytes("WORMHOLE_HELPER")] = address(
-            new WormholeHelper()
-        );
-        contractAddress[SRC_CHAIN_ID][bytes("AXELAR_HELPER")] = address(
-            new AxelarHelper()
-        );
-
-        vm.allowCheatcodes(
-            contractAddress[SRC_CHAIN_ID][bytes("WORMHOLE_HELPER")]
-        );
-        vm.allowCheatcodes(
-            contractAddress[SRC_CHAIN_ID][bytes("AXELAR_HELPER")]
-        );
-
+        console.log("va mama");
         /// @notice deploy amb helpers to BSC, POLYGON & ARB
-        for (uint256 i; i < DST_CHAINS.length; ) {
-            uint256 chainId = DST_CHAINS[i];
+        for (uint256 i; i < ALL_CHAINS.length; ) {
+            uint256 chainId = ALL_CHAINS[i];
 
             vm.selectFork(fork[chainId]);
             contractAddress[chainId][bytes("WORMHOLE_HELPER")] = address(
@@ -319,26 +322,18 @@ abstract contract Setup is Test {
 
     /// @dev deploys the mma sender and receiver adapters to all configured chains
     function _deployCoreContracts() internal {
-        /// @notice deploy mma sender to ETHEREUM
-        vm.selectFork(fork[SRC_CHAIN_ID]);
-        contractAddress[SRC_CHAIN_ID][bytes("MMA_SENDER")] = address(
-            new MultiBridgeMessageSender{salt: _salt}(
-                contractAddress[SRC_CHAIN_ID][bytes("GAC")]
-            )
-        );
-        contractAddress[SRC_CHAIN_ID][bytes("SRC_XERC20")] = address(
-            new xERC20{salt: _salt}(
-                "TEXT_XERC20",
-                "TERC20",
-                contractAddress[SRC_CHAIN_ID][bytes("MMA_SENDER")]
-            )
-        );
-
         /// @notice deploy amb helpers to BSC & POLYGON
-        for (uint256 i; i < DST_CHAINS.length; i++) {
-            uint256 chainId = DST_CHAINS[i];
+        for (uint256 i; i < ALL_CHAINS.length; i++) {
+            uint256 chainId = ALL_CHAINS[i];
 
             vm.selectFork(fork[chainId]);
+            vm.startPrank(owner);
+
+            address mmaSender = address(
+                new MultiBridgeMessageSender{salt: _salt}(
+                    contractAddress[chainId][bytes("SENDER_GAC")]
+                )
+            );
 
             address[] memory _receiverAdapters = new address[](2);
             _receiverAdapters[0] = contractAddress[chainId][
@@ -350,68 +345,74 @@ abstract contract Setup is Test {
 
             address mmaReceiver = address(
                 new MultiBridgeMessageReceiver{salt: _salt}(
-                    contractAddress[chainId][bytes("GAC")],
+                    contractAddress[chainId][bytes("RECEIVER_GAC")],
                     _receiverAdapters,
                     2
                 )
             );
+
+            contractAddress[chainId][bytes("MMA_SENDER")] = mmaSender;
             contractAddress[chainId][bytes("MMA_RECEIVER")] = mmaReceiver;
-            contractAddress[chainId][bytes("DST_XERC20")] = address(
-                new xERC20{salt: _salt}("TEXT_XERC20", "TERC20", mmaReceiver)
+            contractAddress[chainId][bytes("XERC20")] = address(
+                new xERC20{salt: _salt}(
+                    "TEXT_XERC20",
+                    "TERC20",
+                    mmaSender,
+                    mmaReceiver
+                )
             );
+            vm.stopPrank();
         }
     }
 
     /// @dev setup core contracts
     function _setupCoreContracts() internal {
-        /// setup mma sender adapters
-        vm.selectFork(fork[SRC_CHAIN_ID]);
-        vm.startPrank(owner);
-
-        address[] memory _senderAdapters = _sortTwoAdapters(
-            contractAddress[SRC_CHAIN_ID][bytes("AXELAR_SENDER_ADAPTER")],
-            contractAddress[SRC_CHAIN_ID][bytes("WORMHOLE_SENDER_ADAPTER")]
-        );
-
-        MultiBridgeMessageSender(
-            contractAddress[SRC_CHAIN_ID][bytes("MMA_SENDER")]
-        ).addSenderAdapters(_senderAdapters);
-
-        MessageSenderGAC senderGAC = MessageSenderGAC(
-            contractAddress[SRC_CHAIN_ID][bytes("GAC")]
-        );
-        senderGAC.setMultiBridgeMessageSender(
-            contractAddress[SRC_CHAIN_ID][bytes("MMA_SENDER")]
-        );
-        senderGAC.setAuthorisedCaller(
-            contractAddress[SRC_CHAIN_ID][bytes("SRC_XERC20")]
-        );
-        senderGAC.setGlobalMsgDeliveryGasLimit(300000);
-
         /// setup mma receiver adapters
-        for (uint256 i; i < DST_CHAINS.length; ) {
-            uint256 chainId = DST_CHAINS[i];
+        for (uint256 i; i < ALL_CHAINS.length; ) {
+            uint256 chainId = ALL_CHAINS[i];
 
             vm.selectFork(fork[chainId]);
+            vm.startPrank(owner);
+
+            address[] memory _senderAdapters = _sortTwoAdapters(
+                contractAddress[chainId][bytes("AXELAR_SENDER_ADAPTER")],
+                contractAddress[chainId][bytes("WORMHOLE_SENDER_ADAPTER")]
+            );
+
+            MultiBridgeMessageSender(
+                contractAddress[chainId][bytes("MMA_SENDER")]
+            ).addSenderAdapters(_senderAdapters);
+
+            MessageSenderGAC senderGAC = MessageSenderGAC(
+                contractAddress[chainId][bytes("SENDER_GAC")]
+            );
+            senderGAC.setMultiBridgeMessageSender(
+                contractAddress[chainId][bytes("MMA_SENDER")]
+            );
+            senderGAC.setAuthorisedCaller(
+                contractAddress[chainId][bytes("XERC20")]
+            );
+            senderGAC.setGlobalMsgDeliveryGasLimit(300000);
 
             MultiBridgeMessageReceiver dstMMReceiver = MultiBridgeMessageReceiver(
                     contractAddress[chainId][bytes("MMA_RECEIVER")]
                 );
-            dstMMReceiver.updateXERC20(contractAddress[chainId]["DST_XERC20"]);
+            dstMMReceiver.updateXERC20(contractAddress[chainId]["XERC20"]);
 
             MessageReceiverGAC receiverGAC = MessageReceiverGAC(
-                contractAddress[chainId][bytes("GAC")]
+                contractAddress[chainId][bytes("RECEIVER_GAC")]
             );
             receiverGAC.setMultiBridgeMessageReceiver(address(dstMMReceiver));
 
-            vm.selectFork(fork[SRC_CHAIN_ID]);
-            senderGAC.setRemoteMultiBridgeMessageReceiver(
-                chainId,
-                address(dstMMReceiver)
-            );
-            senderGAC.setAuthorisedCaller(
-                contractAddress[chainId][bytes("DST_XERC20")]
-            );
+            for (uint256 j; j < ALL_CHAINS.length; j++) {
+                if (ALL_CHAINS[j] != chainId) {
+                    senderGAC.setRemoteMultiBridgeMessageReceiver(
+                        ALL_CHAINS[j],
+                        contractAddress[ALL_CHAINS[i]][bytes("MMA_RECEIVER")]
+                    );
+                }
+            }
+
             unchecked {
                 ++i;
             }
@@ -422,20 +423,20 @@ abstract contract Setup is Test {
     function _setupAdapters() internal {
         vm.startPrank(owner);
 
-        for (uint256 i; i < DST_CHAINS.length; ) {
-            uint256 chainId = DST_CHAINS[i];
+        for (uint256 i; i < ALL_CHAINS.length; ) {
+            uint256 chainId = ALL_CHAINS[i];
             vm.selectFork(fork[chainId]);
 
             WormholeReceiverAdapter(
                 contractAddress[chainId]["WORMHOLE_RECEIVER_ADAPTER"]
             ).updateSenderAdapter(
-                    contractAddress[SRC_CHAIN_ID]["WORMHOLE_SENDER_ADAPTER"]
+                    contractAddress[chainId]["WORMHOLE_SENDER_ADAPTER"]
                 );
 
             AxelarReceiverAdapter(
                 contractAddress[chainId]["AXELAR_RECEIVER_ADAPTER"]
             ).updateSenderAdapter(
-                    contractAddress[SRC_CHAIN_ID]["AXELAR_SENDER_ADAPTER"]
+                    contractAddress[chainId]["AXELAR_SENDER_ADAPTER"]
                 );
 
             unchecked {

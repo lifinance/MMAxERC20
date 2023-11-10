@@ -6,7 +6,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 /// local imports
 import {IXERC20} from "src/interfaces/EIP7281/IXERC20.sol";
 
-interface IBridge {
+interface IMultiMessageSender {
     function remoteCall(
         uint256 _dstChainId,
         address _target,
@@ -21,19 +21,22 @@ interface IBridge {
 }
 
 contract xERC20 is IXERC20, ERC20 {
-    IBridge public bridge;
+    IMultiMessageSender public mmaSender;
+    address public mmaReceiver;
 
-    modifier onlyBridge() {
-        require(msg.sender == address(bridge), "xERC20: invalid caller");
+    modifier onlyMultiMessageReceiver() {
+        require(msg.sender == address(mmaReceiver), "xERC20: invalid caller");
         _;
     }
 
     constructor(
         string memory _name,
         string memory _symbol,
-        address _bridge
+        address _mmaSender,
+        address _mmaReceiver
     ) ERC20(_name, _symbol) {
-        bridge = IBridge(_bridge);
+        mmaSender = IMultiMessageSender(_mmaSender);
+        mmaReceiver = _mmaReceiver;
 
         /// @dev mints 1 million tokens
         _mint(msg.sender, 1e24);
@@ -50,7 +53,7 @@ contract xERC20 is IXERC20, ERC20 {
         /// assume CREATE2
         /// assume msg has 29 day expiration
         /// assume msg.sender as refund address
-        bridge.remoteCall{value: msg.value}(
+        mmaSender.remoteCall{value: msg.value}(
             _dstChainId,
             address(this),
             bytes(""),
@@ -71,12 +74,13 @@ contract xERC20 is IXERC20, ERC20 {
         uint256 _burningLimit
     ) external override {}
 
-    function mint(address _user, uint256 _amount) external override onlyBridge {
+    function mint(address _user, uint256 _amount) external override onlyMultiMessageReceiver {
         _mint(_user, _amount);
     }
 
-    function burn(address _user, uint256 _amount) external override onlyBridge {
-        _burn(_user, _amount);
+    function burn(address _user, uint256 _amount) external override {
+        /// @notice no use case for now
+        revert();
     }
 
     function mintingMaxLimitOf(

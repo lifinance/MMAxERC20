@@ -15,6 +15,8 @@ import "../../libraries/Message.sol";
 import "../../controllers/MessageReceiverGAC.sol";
 import "../BaseReceiverAdapter.sol";
 
+import "forge-std/console.sol";
+
 /// @notice receiver adapter for wormhole bridge
 /// @dev allows wormhole relayers to write to receiver adapter which then forwards the message to
 /// the MMA receiver.
@@ -89,7 +91,7 @@ contract WormholeReceiverAdapter is BaseReceiverAdapter, IWormholeReceiver {
         if (decodedPayload.receiverAdapter != address(this)) {
             revert Error.INVALID_RECEIVER_ADAPTER();
         }
-
+        
         /// @dev step-4: validate the destination
         if (decodedPayload.finalDestination != receiverGAC.multiBridgeMsgReceiver()) {
             revert Error.INVALID_FINAL_DESTINATION();
