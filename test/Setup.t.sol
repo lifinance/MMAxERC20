@@ -200,7 +200,6 @@ abstract contract Setup is Test {
             address receiverAdapter = address(
                 new WormholeReceiverAdapter{salt: _salt}(
                     WORMHOLE_RELAYERS[i],
-                    srcChainId,
                     contractAddress[chainId][bytes("GAC")]
                 )
             );
@@ -351,7 +350,6 @@ abstract contract Setup is Test {
 
             address mmaReceiver = address(
                 new MultiBridgeMessageReceiver{salt: _salt}(
-                    SRC_CHAIN_ID,
                     contractAddress[chainId][bytes("GAC")],
                     _receiverAdapters,
                     2

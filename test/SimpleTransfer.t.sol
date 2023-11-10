@@ -51,9 +51,10 @@ contract SimpleTransferTest is Setup {
         bytes32 msgId = _getMsgId(vm.getRecordedLogs());
 
         vm.selectFork(fork[DST_CHAIN_ID]);
-        vm.recordLogs();
-        /// schedule the message for execution by moving it to governance timelock contract
-        MultiBridgeMessageReceiver(contractAddress[DST_CHAIN_ID][bytes("MMA_RECEIVER")]).scheduleMessageExecution(
+        vm.recordLogs();    
+
+        /// execute the received message
+        MultiBridgeMessageReceiver(contractAddress[DST_CHAIN_ID][bytes("MMA_RECEIVER")]).executeMessage(
             msgId,
             MessageLibrary.MessageExecutionParams({
                 target: contractAddress[SRC_CHAIN_ID][bytes("SRC_XERC20")],

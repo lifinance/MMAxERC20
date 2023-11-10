@@ -24,8 +24,6 @@ contract MultiBridgeMessageReceiver is IMultiBridgeMessageReceiver, ExecutorAwar
     using MessageLibrary for MessageLibrary.Message;
     using MessageLibrary for MessageLibrary.MessageExecutionParams;
 
-    /// @notice the id of the source chain that this contract can receive messages from
-    uint256 public immutable srcChainId;
     /// @notice the global access control contract
     IGAC public immutable gac;
 
@@ -76,15 +74,11 @@ contract MultiBridgeMessageReceiver is IMultiBridgeMessageReceiver, ExecutorAwar
     ////////////////////////////////////////////////////////////////*/
 
     /// @notice sets the initial parameters
-    constructor(uint256 _srcChainId, address _gac, address[] memory _receiverAdapters, uint64 _quorum) {
-        if (_srcChainId == 0) {
-            revert Error.INVALID_SENDER_CHAIN_ID();
-        }
+    constructor(address _gac, address[] memory _receiverAdapters, uint64 _quorum) {
         if (_gac == address(0)) {
             revert Error.ZERO_ADDRESS_INPUT();
         }
 
-        srcChainId = _srcChainId;
         gac = IGAC(_gac);
 
         for (uint256 i; i < _receiverAdapters.length;) {
@@ -109,10 +103,6 @@ contract MultiBridgeMessageReceiver is IMultiBridgeMessageReceiver, ExecutorAwar
 
         if (_message.target == address(0)) {
             revert Error.INVALID_TARGET();
-        }
-
-        if (_message.srcChainId != srcChainId) {
-            revert Error.INVALID_SENDER_CHAIN_ID();
         }
 
         /// this msgId is totally different with each adapters' internal msgId(which is their internal nonce essentially)
@@ -146,7 +136,7 @@ contract MultiBridgeMessageReceiver is IMultiBridgeMessageReceiver, ExecutorAwar
     }
 
     /// @inheritdoc IMultiBridgeMessageReceiver
-    function scheduleMessageExecution(bytes32 _msgId, MessageLibrary.MessageExecutionParams calldata _execParams)
+    function executeMessage(bytes32 _msgId, MessageLibrary.MessageExecutionParams calldata _execParams)
         external
         override
     {
