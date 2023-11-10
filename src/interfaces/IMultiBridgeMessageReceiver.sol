@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-pragma solidity >=0.8.9;
+pragma solidity >=0.8.20;
 
 import "../libraries/Message.sol";
 
@@ -34,10 +34,10 @@ interface IMultiBridgeMessageReceiver {
     /// @param newQuorum is the new quorum value
     event QuorumUpdated(uint64 oldQuorum, uint64 newQuorum);
 
-    /// @notice emitted when the governance timelock address is updated.
-    /// @param oldTimelock is the previous governance timelock contract address
-    /// @param newTimelock is the new governance timelock contract address
-    event GovernanceTimelockUpdated(address oldTimelock, address newTimelock);
+    /// @notice emitted when the xERC20 address is updated.
+    /// @param oldXERC20 is the previous xERC20 contract address
+    /// @param newXERC20 is the new governance xERC20 contract address
+    event xERC20Updated(address oldXERC20, address newXERC20);
 
     /// @notice Receive messages from allowed bridge receiver adapters.
     /// @dev Every receiver adapter should call this function with decoded MessageLibrary.Message
@@ -69,7 +69,7 @@ interface IMultiBridgeMessageReceiver {
         uint64 _newQuorum
     ) external;
 
-    /// @notice updates the governance timelock address, which is the contract that ultimately executes valid messages.
-    /// @param  _newGovernanceTimelock is the new governance timelock contract address
-    function updateGovernanceTimelock(address _newGovernanceTimelock) external;
+    /// @notice updates the xERC20 address, which is the contract that ultimately executes valid messages.
+    /// @param  _xERC20 is the new xERC20 contract address
+    function updateXERC20(address _xERC20) external;
 }
