@@ -62,22 +62,12 @@ contract AxelarReceiverAdapter is BaseReceiverAdapter, IAxelarExecutable {
         }
 
         /// @dev step-2: validate the contract call
-        if (
-            !gateway.validateContractCall(
-                _commandId,
-                _sourceChainId,
-                _sourceAddress,
-                keccak256(_payload)
-            )
-        ) {
+        if (!gateway.validateContractCall(_commandId, _sourceChainId, _sourceAddress, keccak256(_payload))) {
             revert Error.NOT_APPROVED_BY_GATEWAY();
         }
 
         /// decode the cross-chain payload
-        AdapterPayload memory decodedPayload = abi.decode(
-            _payload,
-            (AdapterPayload)
-        );
+        AdapterPayload memory decodedPayload = abi.decode(_payload, (AdapterPayload));
         bytes32 msgId = decodedPayload.msgId;
 
         /// @dev step-3: check for duplicate message
@@ -98,15 +88,9 @@ contract AxelarReceiverAdapter is BaseReceiverAdapter, IAxelarExecutable {
         isMessageExecuted[msgId] = true;
         commandIdStatus[_commandId] = true;
 
-        MessageLibrary.Message memory _data = abi.decode(
-            decodedPayload.data,
-            (MessageLibrary.Message)
-        );
+        MessageLibrary.Message memory _data = abi.decode(decodedPayload.data, (MessageLibrary.Message));
 
-        try
-            IMultiBridgeMessageReceiver(receiverGAC.multiBridgeMsgReceiver())
-                .receiveMessage(_data)
-        {
+        try IMultiBridgeMessageReceiver(receiverGAC.multiBridgeMsgReceiver()).receiveMessage(_data) {
             emit MessageIdExecuted(_data.srcChainId, msgId);
         } catch (bytes memory lowLevelData) {
             revert MessageFailure(msgId, lowLevelData);

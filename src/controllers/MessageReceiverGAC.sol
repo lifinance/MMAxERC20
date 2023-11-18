@@ -10,6 +10,8 @@ contract MessageReceiverGAC is GAC {
 
     address public multiBridgeMsgReceiver;
 
+    constructor(address _owner) GAC(_owner) {}
+
     function setMultiBridgeMessageReceiver(address _mmaReceiver) external onlyOwner {
         if (_mmaReceiver == address(0)) {
             revert Error.ZERO_ADDRESS_INPUT();

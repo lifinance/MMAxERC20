@@ -29,50 +29,33 @@ contract xERC20 is IXERC20, ERC20 {
         _;
     }
 
-    constructor(
-        string memory _name,
-        string memory _symbol,
-        address _mmaSender,
-        address _mmaReceiver
-    ) ERC20(_name, _symbol) {
+    constructor(string memory _name, string memory _symbol, address _initialOwner, address _mmaSender, address _mmaReceiver)
+        ERC20(_name, _symbol)
+    {
         mmaSender = IMultiMessageSender(_mmaSender);
         mmaReceiver = _mmaReceiver;
 
         /// @dev mints 1 million tokens
-        _mint(msg.sender, 1e24);
+        _mint(_initialOwner, 1e24);
     }
 
-    function xChainTransfer(
-        uint256 _dstChainId,
-        uint256[] calldata _fees,
-        address _receiver,
-        uint256 _amount
-    ) external payable {
+    function xChainTransfer(uint256 _dstChainId, uint256[] calldata _fees, address _receiver, uint256 _amount)
+        external
+        payable
+    {
         _burn(msg.sender, _amount);
 
         /// assume CREATE2
         /// assume msg has 29 day expiration
         /// assume msg.sender as refund address
         mmaSender.remoteCall{value: msg.value}(
-            _dstChainId,
-            address(this),
-            bytes(""),
-            _amount,
-            29 days,
-            msg.sender,
-            _fees,
-            2,
-            new address[](0)
+            _dstChainId, address(this), bytes(""), _amount, 29 days, msg.sender, _fees, 2, new address[](0)
         );
     }
 
     function setLockbox(address _lockbox) external override {}
 
-    function setLimits(
-        address _bridge,
-        uint256 _mintingLimit,
-        uint256 _burningLimit
-    ) external override {}
+    function setLimits(address _bridge, uint256 _mintingLimit, uint256 _burningLimit) external override {}
 
     function mint(address _user, uint256 _amount) external override onlyMultiMessageReceiver {
         _mint(_user, _amount);
@@ -83,19 +66,17 @@ contract xERC20 is IXERC20, ERC20 {
         revert();
     }
 
-    function mintingMaxLimitOf(
-        address _bridge
-    ) external view override returns (uint256 limits_) {}
+    function mintingMaxLimitOf(address _bridge) external view override returns (uint256 limits_) {
+        if (_bridge != mmaReceiver) return 0;
+        return type(uint256).max;
+    }
 
-    function burningMaxLimitOf(
-        address _bridge
-    ) external view override returns (uint256 _limit) {}
+    function burningMaxLimitOf(address _bridge) external view override returns (uint256 _limit) {}
 
-    function mintingCurrentLimitOf(
-        address _bridge
-    ) external view override returns (uint256 _limit) {}
+    function mintingCurrentLimitOf(address _bridge) external view override returns (uint256 _limit) {
+        if (_bridge != mmaReceiver) return 0;
+        return type(uint256).max;
+    }
 
-    function burningCurrentLimitOf(
-        address _bridge
-    ) external view override returns (uint256 _limit) {}
+    function burningCurrentLimitOf(address _bridge) external view override returns (uint256 _limit) {}
 }

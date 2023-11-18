@@ -91,7 +91,7 @@ contract WormholeReceiverAdapter is BaseReceiverAdapter, IWormholeReceiver {
         if (decodedPayload.receiverAdapter != address(this)) {
             revert Error.INVALID_RECEIVER_ADAPTER();
         }
-        
+
         /// @dev step-4: validate the destination
         if (decodedPayload.finalDestination != receiverGAC.multiBridgeMsgReceiver()) {
             revert Error.INVALID_FINAL_DESTINATION();

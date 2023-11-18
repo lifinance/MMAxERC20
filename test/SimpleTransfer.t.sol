@@ -31,15 +31,14 @@ contract SimpleTransferTest is Setup {
         uint256[] memory _fees = new uint256[](2);
         _fees[0] = 1 ether;
 
-        (uint256 wormholeFee, ) = IWormholeRelayer(ETH_RELAYER)
-            .quoteEVMDeliveryPrice(5, 0, 300000);
+        (uint256 wormholeFee,) = IWormholeRelayer(POLYGON_RELAYER).quoteEVMDeliveryPrice(6, 0, 300000);
         _fees[1] = wormholeFee;
 
         vm.recordLogs();
         uint256 expiration = block.timestamp + 29 days;
-        xERC20(contractAddress[SRC_CHAIN_ID][bytes("XERC20")]).xChainTransfer{
-            value: 1 ether + wormholeFee
-        }(DST_CHAIN_ID, _fees, owner, 1e18);
+        xERC20(contractAddress[SRC_CHAIN_ID][bytes("XERC20")]).xChainTransfer{value: 1 ether + wormholeFee}(
+            DST_CHAIN_ID, _fees, owner, 1e18
+        );
         Vm.Log[] memory logs = vm.getRecordedLogs();
         vm.stopPrank();
 
@@ -51,18 +50,16 @@ contract SimpleTransferTest is Setup {
         vm.recordLogs();
 
         /// execute the received message
-        MultiBridgeMessageReceiver(
-            contractAddress[DST_CHAIN_ID][bytes("MMA_RECEIVER")]
-        ).executeMessage(
-                msgId,
-                MessageLibrary.MessageExecutionParams({
-                    target: contractAddress[SRC_CHAIN_ID][bytes("XERC20")],
-                    callData: bytes(""),
-                    value: 1e18,
-                    nonce: 1,
-                    expiration: expiration
-                })
-            );
+        MultiBridgeMessageReceiver(contractAddress[DST_CHAIN_ID][bytes("MMA_RECEIVER")]).executeMessage(
+            msgId,
+            MessageLibrary.MessageExecutionParams({
+                target: contractAddress[SRC_CHAIN_ID][bytes("XERC20")],
+                callData: bytes(""),
+                value: 1e18,
+                nonce: 1,
+                expiration: expiration
+            })
+        );
     }
 
     function _dstToSrc() internal {
@@ -73,15 +70,14 @@ contract SimpleTransferTest is Setup {
         uint256[] memory _fees = new uint256[](2);
         _fees[0] = 1 ether;
 
-        (uint256 wormholeFee, ) = IWormholeRelayer(POLYGON_RELAYER)
-            .quoteEVMDeliveryPrice(2, 0, 300000);
+        (uint256 wormholeFee,) = IWormholeRelayer(AVA_RELAYER).quoteEVMDeliveryPrice(5, 0, 300000);
         _fees[1] = wormholeFee;
 
         vm.recordLogs();
         uint256 expiration = block.timestamp + 29 days;
-        xERC20(contractAddress[DST_CHAIN_ID][bytes("XERC20")]).xChainTransfer{
-            value: 1 ether + wormholeFee
-        }(SRC_CHAIN_ID, _fees, owner, 1e18);
+        xERC20(contractAddress[DST_CHAIN_ID][bytes("XERC20")]).xChainTransfer{value: 1 ether + wormholeFee}(
+            SRC_CHAIN_ID, _fees, owner, 1e18
+        );
         Vm.Log[] memory logs = vm.getRecordedLogs();
         vm.stopPrank();
 
@@ -92,17 +88,15 @@ contract SimpleTransferTest is Setup {
         vm.selectFork(fork[SRC_CHAIN_ID]);
 
         /// execute the received message
-        MultiBridgeMessageReceiver(
-            contractAddress[SRC_CHAIN_ID][bytes("MMA_RECEIVER")]
-        ).executeMessage(
-                msgId,
-                MessageLibrary.MessageExecutionParams({
-                    target: contractAddress[DST_CHAIN_ID][bytes("XERC20")],
-                    callData: bytes(""),
-                    value: 1e18,
-                    nonce: 1,
-                    expiration: expiration
-                })
-            );
+        MultiBridgeMessageReceiver(contractAddress[SRC_CHAIN_ID][bytes("MMA_RECEIVER")]).executeMessage(
+            msgId,
+            MessageLibrary.MessageExecutionParams({
+                target: contractAddress[DST_CHAIN_ID][bytes("XERC20")],
+                callData: bytes(""),
+                value: 1e18,
+                nonce: 1,
+                expiration: expiration
+            })
+        );
     }
 }

@@ -47,8 +47,7 @@ interface IMultiBridgeMessageReceiver {
     /// @notice Sends a message, that has achieved quorum and has not yet expired, to the governance timelock for eventual execution.
     /// @param _msgId is the unique identifier of the message
     /// @param _execParams are the params for message execution
-    function executeMessage(bytes32 _msgId, MessageLibrary.MessageExecutionParams calldata _execParams)
-        external;
+    function executeMessage(bytes32 _msgId, MessageLibrary.MessageExecutionParams calldata _execParams) external;
 
     /// @notice adds or removes bridge receiver adapters.
     /// @param _receiverAdapters the list of receiver adapters to add or remove

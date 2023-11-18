@@ -39,6 +39,8 @@ contract MessageSenderGAC is GAC {
 
     mapping(uint256 chainId => address mmaReceiver) public remoteMultiBridgeMessageReceiver;
 
+    constructor(address _owner) GAC(_owner) {}
+
     /*///////////////////////////////////////////////////////////////
                           EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/

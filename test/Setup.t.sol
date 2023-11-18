@@ -37,10 +37,11 @@ abstract contract Setup is Test {
     uint256 constant ETHEREUM_CHAIN_ID = 1;
     uint256 constant BSC_CHAIN_ID = 56;
     uint256 constant POLYGON_CHAIN_ID = 137;
+    uint256 constant AVA_CHAIN_ID = 43114;
 
     /// @dev common src and dst chain IDs
-    uint256 constant SRC_CHAIN_ID = ETHEREUM_CHAIN_ID;
-    uint256 constant DST_CHAIN_ID = POLYGON_CHAIN_ID;
+    uint256 constant SRC_CHAIN_ID = POLYGON_CHAIN_ID;
+    uint256 constant DST_CHAIN_ID = AVA_CHAIN_ID;
 
     address constant owner = address(420);
     address constant refundAddress = address(420420);
@@ -50,53 +51,35 @@ abstract contract Setup is Test {
     /// @dev constants for axelar
     address constant ETH_GATEWAY = 0x4F4495243837681061C4743b74B3eEdf548D56A5;
     address constant BSC_GATEWAY = 0x304acf330bbE08d1e512eefaa92F6a57871fD895;
-    address constant POLYGON_GATEWAY =
-        0x6f015F16De9fC8791b234eF68D486d2bF203FBA8;
+    address constant POLYGON_GATEWAY = 0x6f015F16De9fC8791b234eF68D486d2bF203FBA8;
+    address constant AVA_GATEWAY = 0x5029C0EFf6C34351a0CEc334542cDb22c7928f78;
 
-    address constant ETH_GAS_SERVICE =
-        0x2d5d7d31F671F86C782533cc367F14109a082712;
-    address constant BSC_GAS_SERVICE =
-        0x2d5d7d31F671F86C782533cc367F14109a082712;
-    address constant POLYGON_GAS_SERVICE =
-        0x2d5d7d31F671F86C782533cc367F14109a082712;
+    address constant ETH_GAS_SERVICE = 0x2d5d7d31F671F86C782533cc367F14109a082712;
+    address constant BSC_GAS_SERVICE = 0x2d5d7d31F671F86C782533cc367F14109a082712;
+    address constant POLYGON_GAS_SERVICE = 0x2d5d7d31F671F86C782533cc367F14109a082712;
+    address constant AVA_GAS_SERVICE = 0x2d5d7d31F671F86C782533cc367F14109a082712;
 
     /// @dev constants for wormhole
     address constant ETH_RELAYER = 0x27428DD2d3DD32A4D7f7C497eAaa23130d894911;
     address constant BSC_RELAYER = 0x27428DD2d3DD32A4D7f7C497eAaa23130d894911;
-    address constant POLYGON_RELAYER =
-        0x27428DD2d3DD32A4D7f7C497eAaa23130d894911;
+    address constant POLYGON_RELAYER = 0x27428DD2d3DD32A4D7f7C497eAaa23130d894911;
+    address constant AVA_RELAYER = 0x27428DD2d3DD32A4D7f7C497eAaa23130d894911;
 
     /*///////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
     /// @notice configure all the chain ids we use for the tests (including src chain)
     /// id 0 represents src chain
-    uint256[] public ALL_CHAINS = [
-        ETHEREUM_CHAIN_ID,
-        BSC_CHAIN_ID,
-        POLYGON_CHAIN_ID
-    ];
+    uint256[] public ALL_CHAINS = [ETHEREUM_CHAIN_ID, BSC_CHAIN_ID, POLYGON_CHAIN_ID, AVA_CHAIN_ID];
 
     /// @notice configure all wormhole parameters in order of DST_CHAINS
-    address[] public WORMHOLE_RELAYERS = [
-        ETH_RELAYER,
-        BSC_RELAYER,
-        POLYGON_RELAYER
-    ];
-    uint16[] public WORMHOLE_CHAIN_IDS = [2, 4, 5];
+    address[] public WORMHOLE_RELAYERS = [ETH_RELAYER, BSC_RELAYER, POLYGON_RELAYER, AVA_RELAYER];
+    uint16[] public WORMHOLE_CHAIN_IDS = [2, 4, 5, 6];
 
     /// @notice configure all axelar parameters in order of DST_CHAINS
-    address[] public AXELAR_GATEWAYS = [
-        ETH_GATEWAY,
-        BSC_GATEWAY,
-        POLYGON_GATEWAY
-    ];
-    address[] public AXELAR_GAS_SERVICES = [
-        ETH_GAS_SERVICE,
-        BSC_GAS_SERVICE,
-        POLYGON_GAS_SERVICE
-    ];
-    string[] public AXELAR_CHAIN_IDS = ["ethereum", "binance", "polygon"];
+    address[] public AXELAR_GATEWAYS = [ETH_GATEWAY, BSC_GATEWAY, POLYGON_GATEWAY, AVA_GATEWAY];
+    address[] public AXELAR_GAS_SERVICES = [ETH_GAS_SERVICE, BSC_GAS_SERVICE, POLYGON_GAS_SERVICE, AVA_GAS_SERVICE];
+    string[] public AXELAR_CHAIN_IDS = ["ethereum", "binance", "polygon", "avalanche"];
 
     /// @dev maps the local chain id to a fork id
     mapping(uint256 => uint256) public fork;
@@ -112,18 +95,18 @@ abstract contract Setup is Test {
         /// @notice chain id: 1 (always source chain)
         /// @notice chain id: 137
         /// @notice chain id: 56
-        fork[ETHEREUM_CHAIN_ID] = vm.createSelectFork(
-            vm.envString("ETH_FORK_URL")
-        );
+        /// @notice chain id: 43114
+        fork[ETHEREUM_CHAIN_ID] = vm.createSelectFork(vm.envString("ETH_FORK_URL"));
 
         deal(owner, 500 ether);
 
         fork[BSC_CHAIN_ID] = vm.createSelectFork(vm.envString("BSC_FORK_URL"));
         vm.deal(owner, 500 ether);
 
-        fork[POLYGON_CHAIN_ID] = vm.createSelectFork(
-            vm.envString("POLYGON_FORK_URL")
-        );
+        fork[POLYGON_CHAIN_ID] = vm.createSelectFork(vm.envString("POLYGON_FORK_URL"));
+        vm.deal(owner, 500 ether);
+
+        fork[AVA_CHAIN_ID] = vm.createSelectFork(vm.envString("AVA_FORK_URL"));
         vm.deal(owner, 500 ether);
 
         /// @dev deploys controller contract to all chains
@@ -155,16 +138,12 @@ abstract contract Setup is Test {
     function _deployGac() internal {
         vm.startPrank(owner);
 
-        for (uint256 i; i < ALL_CHAINS.length; ) {
+        for (uint256 i; i < ALL_CHAINS.length;) {
             uint256 chainId = ALL_CHAINS[i];
             vm.selectFork(fork[chainId]);
 
-            contractAddress[chainId][bytes("SENDER_GAC")] = address(
-                new MessageSenderGAC{salt: _salt}()
-            );
-            contractAddress[chainId][bytes("RECEIVER_GAC")] = address(
-                new MessageReceiverGAC{salt: _salt}()
-            );
+            contractAddress[chainId][bytes("SENDER_GAC")] = address(new MessageSenderGAC{salt: _salt}(owner));
+            contractAddress[chainId][bytes("RECEIVER_GAC")] = address(new MessageReceiverGAC{salt: _salt}(owner));
 
             unchecked {
                 ++i;
@@ -180,13 +159,11 @@ abstract contract Setup is Test {
         /// @notice deploy receiver adapters to all DST_CHAINS
         address[] memory _receiverAdapters = new address[](len);
 
-        for (uint256 i; i < len; ) {
+        for (uint256 i; i < len;) {
             uint256 chainId = ALL_CHAINS[i];
             vm.selectFork(fork[chainId]);
 
-            contractAddress[chainId][
-                bytes("WORMHOLE_SENDER_ADAPTER")
-            ] = address(
+            contractAddress[chainId][bytes("WORMHOLE_SENDER_ADAPTER")] = address(
                 new WormholeSenderAdapter{salt: _salt}(
                     WORMHOLE_RELAYERS[i],
                     contractAddress[chainId][bytes("SENDER_GAC")]
@@ -198,9 +175,7 @@ abstract contract Setup is Test {
                     contractAddress[chainId][bytes("RECEIVER_GAC")]
                 )
             );
-            contractAddress[chainId][
-                bytes("WORMHOLE_RECEIVER_ADAPTER")
-            ] = receiverAdapter;
+            contractAddress[chainId][bytes("WORMHOLE_RECEIVER_ADAPTER")] = receiverAdapter;
             _receiverAdapters[i] = receiverAdapter;
 
             unchecked {
@@ -213,13 +188,13 @@ abstract contract Setup is Test {
             /// @dev sets some configs to sender adapter (ETH_CHAIN_ADAPTER)
             vm.selectFork(fork[chainId]);
             vm.startPrank(owner);
-            WormholeSenderAdapter(
-                contractAddress[chainId][bytes("WORMHOLE_SENDER_ADAPTER")]
-            ).updateReceiverAdapter(ALL_CHAINS, _receiverAdapters);
+            WormholeSenderAdapter(contractAddress[chainId][bytes("WORMHOLE_SENDER_ADAPTER")]).updateReceiverAdapter(
+                ALL_CHAINS, _receiverAdapters
+            );
 
-            WormholeSenderAdapter(
-                contractAddress[chainId][bytes("WORMHOLE_SENDER_ADAPTER")]
-            ).setChainIdMap(ALL_CHAINS, WORMHOLE_CHAIN_IDS);
+            WormholeSenderAdapter(contractAddress[chainId][bytes("WORMHOLE_SENDER_ADAPTER")]).setChainIdMap(
+                ALL_CHAINS, WORMHOLE_CHAIN_IDS
+            );
             vm.stopPrank();
         }
     }
@@ -232,7 +207,7 @@ abstract contract Setup is Test {
         /// @notice deploy receiver adapters to all DST_CHAINS
         address[] memory _receiverAdapters = new address[](len);
 
-        for (uint256 i; i < len; ) {
+        for (uint256 i; i < len;) {
             uint256 chainId = ALL_CHAINS[i];
             vm.selectFork(fork[chainId]);
 
@@ -243,9 +218,9 @@ abstract contract Setup is Test {
             );
 
             vm.prank(owner);
-            AxelarSenderAdapter(
-                contractAddress[chainId][bytes("AXELAR_SENDER_ADAPTER")]
-            ).setAxelarConfig(AXELAR_GAS_SERVICES[i], AXELAR_GATEWAYS[i]);
+            AxelarSenderAdapter(contractAddress[chainId][bytes("AXELAR_SENDER_ADAPTER")]).setAxelarConfig(
+                AXELAR_GAS_SERVICES[i], AXELAR_GATEWAYS[i]
+            );
 
             address receiverAdapter = address(
                 new AxelarReceiverAdapter{salt: _salt}(
@@ -253,13 +228,9 @@ abstract contract Setup is Test {
                 )
             );
             vm.prank(owner);
-            AxelarReceiverAdapter(receiverAdapter).setAxelarConfig(
-                AXELAR_GATEWAYS[i]
-            );
+            AxelarReceiverAdapter(receiverAdapter).setAxelarConfig(AXELAR_GATEWAYS[i]);
 
-            contractAddress[chainId][
-                bytes("AXELAR_RECEIVER_ADAPTER")
-            ] = receiverAdapter;
+            contractAddress[chainId][bytes("AXELAR_RECEIVER_ADAPTER")] = receiverAdapter;
             _receiverAdapters[i] = receiverAdapter;
 
             unchecked {
@@ -267,22 +238,18 @@ abstract contract Setup is Test {
             }
         }
 
-        for (uint256 j; j < len; ) {
+        for (uint256 j; j < len;) {
             uint256 chainId = ALL_CHAINS[j];
             vm.selectFork(fork[chainId]);
             vm.startPrank(owner);
 
-            console.log(
-                contractAddress[chainId][bytes("AXELAR_SENDER_ADAPTER")]
+            AxelarSenderAdapter(contractAddress[chainId][bytes("AXELAR_SENDER_ADAPTER")]).updateReceiverAdapter(
+                ALL_CHAINS, _receiverAdapters
             );
-            console.log(_receiverAdapters.length);
-            AxelarSenderAdapter(
-                contractAddress[chainId][bytes("AXELAR_SENDER_ADAPTER")]
-            ).updateReceiverAdapter(ALL_CHAINS, _receiverAdapters);
 
-            AxelarSenderAdapter(
-                contractAddress[chainId][bytes("AXELAR_SENDER_ADAPTER")]
-            ).setChainIdMap(ALL_CHAINS, AXELAR_CHAIN_IDS);
+            AxelarSenderAdapter(contractAddress[chainId][bytes("AXELAR_SENDER_ADAPTER")]).setChainIdMap(
+                ALL_CHAINS, AXELAR_CHAIN_IDS
+            );
             vm.stopPrank();
 
             unchecked {
@@ -294,25 +261,16 @@ abstract contract Setup is Test {
 
     /// @dev deploys the amb helpers to all configured chains
     function _deployHelpers() internal {
-        console.log("va mama");
         /// @notice deploy amb helpers to BSC, POLYGON & ARB
-        for (uint256 i; i < ALL_CHAINS.length; ) {
+        for (uint256 i; i < ALL_CHAINS.length;) {
             uint256 chainId = ALL_CHAINS[i];
 
             vm.selectFork(fork[chainId]);
-            contractAddress[chainId][bytes("WORMHOLE_HELPER")] = address(
-                new WormholeHelper{salt: _salt}()
-            );
-            contractAddress[chainId][bytes("AXELAR_HELPER")] = address(
-                new AxelarHelper{salt: _salt}()
-            );
+            contractAddress[chainId][bytes("WORMHOLE_HELPER")] = address(new WormholeHelper{salt: _salt}());
+            contractAddress[chainId][bytes("AXELAR_HELPER")] = address(new AxelarHelper{salt: _salt}());
 
-            vm.allowCheatcodes(
-                contractAddress[chainId][bytes("WORMHOLE_HELPER")]
-            );
-            vm.allowCheatcodes(
-                contractAddress[chainId][bytes("AXELAR_HELPER")]
-            );
+            vm.allowCheatcodes(contractAddress[chainId][bytes("WORMHOLE_HELPER")]);
+            vm.allowCheatcodes(contractAddress[chainId][bytes("AXELAR_HELPER")]);
 
             unchecked {
                 ++i;
@@ -336,12 +294,8 @@ abstract contract Setup is Test {
             );
 
             address[] memory _receiverAdapters = new address[](2);
-            _receiverAdapters[0] = contractAddress[chainId][
-                bytes("WORMHOLE_RECEIVER_ADAPTER")
-            ];
-            _receiverAdapters[1] = contractAddress[chainId][
-                bytes("AXELAR_RECEIVER_ADAPTER")
-            ];
+            _receiverAdapters[0] = contractAddress[chainId][bytes("WORMHOLE_RECEIVER_ADAPTER")];
+            _receiverAdapters[1] = contractAddress[chainId][bytes("AXELAR_RECEIVER_ADAPTER")];
 
             address mmaReceiver = address(
                 new MultiBridgeMessageReceiver{salt: _salt}(
@@ -357,6 +311,7 @@ abstract contract Setup is Test {
                 new xERC20{salt: _salt}(
                     "TEXT_XERC20",
                     "TERC20",
+                    owner,
                     mmaSender,
                     mmaReceiver
                 )
@@ -368,7 +323,7 @@ abstract contract Setup is Test {
     /// @dev setup core contracts
     function _setupCoreContracts() internal {
         /// setup mma receiver adapters
-        for (uint256 i; i < ALL_CHAINS.length; ) {
+        for (uint256 i; i < ALL_CHAINS.length;) {
             uint256 chainId = ALL_CHAINS[i];
 
             vm.selectFork(fork[chainId]);
@@ -379,36 +334,24 @@ abstract contract Setup is Test {
                 contractAddress[chainId][bytes("WORMHOLE_SENDER_ADAPTER")]
             );
 
-            MultiBridgeMessageSender(
-                contractAddress[chainId][bytes("MMA_SENDER")]
-            ).addSenderAdapters(_senderAdapters);
+            MultiBridgeMessageSender(contractAddress[chainId][bytes("MMA_SENDER")]).addSenderAdapters(_senderAdapters);
 
-            MessageSenderGAC senderGAC = MessageSenderGAC(
-                contractAddress[chainId][bytes("SENDER_GAC")]
-            );
-            senderGAC.setMultiBridgeMessageSender(
-                contractAddress[chainId][bytes("MMA_SENDER")]
-            );
-            senderGAC.setAuthorisedCaller(
-                contractAddress[chainId][bytes("XERC20")]
-            );
+            MessageSenderGAC senderGAC = MessageSenderGAC(contractAddress[chainId][bytes("SENDER_GAC")]);
+            senderGAC.setMultiBridgeMessageSender(contractAddress[chainId][bytes("MMA_SENDER")]);
+            senderGAC.setAuthorisedCaller(contractAddress[chainId][bytes("XERC20")]);
             senderGAC.setGlobalMsgDeliveryGasLimit(300000);
 
-            MultiBridgeMessageReceiver dstMMReceiver = MultiBridgeMessageReceiver(
-                    contractAddress[chainId][bytes("MMA_RECEIVER")]
-                );
+            MultiBridgeMessageReceiver dstMMReceiver =
+                MultiBridgeMessageReceiver(contractAddress[chainId][bytes("MMA_RECEIVER")]);
             dstMMReceiver.updateXERC20(contractAddress[chainId]["XERC20"]);
 
-            MessageReceiverGAC receiverGAC = MessageReceiverGAC(
-                contractAddress[chainId][bytes("RECEIVER_GAC")]
-            );
+            MessageReceiverGAC receiverGAC = MessageReceiverGAC(contractAddress[chainId][bytes("RECEIVER_GAC")]);
             receiverGAC.setMultiBridgeMessageReceiver(address(dstMMReceiver));
 
             for (uint256 j; j < ALL_CHAINS.length; j++) {
                 if (ALL_CHAINS[j] != chainId) {
                     senderGAC.setRemoteMultiBridgeMessageReceiver(
-                        ALL_CHAINS[j],
-                        contractAddress[ALL_CHAINS[i]][bytes("MMA_RECEIVER")]
+                        ALL_CHAINS[j], contractAddress[ALL_CHAINS[i]][bytes("MMA_RECEIVER")]
                     );
                 }
             }
@@ -423,21 +366,17 @@ abstract contract Setup is Test {
     function _setupAdapters() internal {
         vm.startPrank(owner);
 
-        for (uint256 i; i < ALL_CHAINS.length; ) {
+        for (uint256 i; i < ALL_CHAINS.length;) {
             uint256 chainId = ALL_CHAINS[i];
             vm.selectFork(fork[chainId]);
 
-            WormholeReceiverAdapter(
-                contractAddress[chainId]["WORMHOLE_RECEIVER_ADAPTER"]
-            ).updateSenderAdapter(
-                    contractAddress[chainId]["WORMHOLE_SENDER_ADAPTER"]
-                );
+            WormholeReceiverAdapter(contractAddress[chainId]["WORMHOLE_RECEIVER_ADAPTER"]).updateSenderAdapter(
+                contractAddress[chainId]["WORMHOLE_SENDER_ADAPTER"]
+            );
 
-            AxelarReceiverAdapter(
-                contractAddress[chainId]["AXELAR_RECEIVER_ADAPTER"]
-            ).updateSenderAdapter(
-                    contractAddress[chainId]["AXELAR_SENDER_ADAPTER"]
-                );
+            AxelarReceiverAdapter(contractAddress[chainId]["AXELAR_RECEIVER_ADAPTER"]).updateSenderAdapter(
+                contractAddress[chainId]["AXELAR_SENDER_ADAPTER"]
+            );
 
             unchecked {
                 ++i;
@@ -446,19 +385,11 @@ abstract contract Setup is Test {
     }
 
     /// @dev helps payload delivery using logs
-    function _simulatePayloadDelivery(
-        uint256 _srcChainId,
-        uint256 _dstChainId,
-        Vm.Log[] memory _logs
-    ) internal {
+    function _simulatePayloadDelivery(uint256 _srcChainId, uint256 _dstChainId, Vm.Log[] memory _logs) internal {
         /// simulate wormhole off-chain infra
-        WormholeHelper(contractAddress[_srcChainId][bytes("WORMHOLE_HELPER")])
-            .help(
-                _wormholeChainId(_srcChainId),
-                fork[_dstChainId],
-                _wormholeRelayer(_dstChainId),
-                _logs
-            );
+        WormholeHelper(contractAddress[_srcChainId][bytes("WORMHOLE_HELPER")]).help(
+            _wormholeChainId(_srcChainId), fork[_dstChainId], _wormholeRelayer(_dstChainId), _logs
+        );
 
         /// simulate axelar off-chain infra
         AxelarHelper(contractAddress[_srcChainId][bytes("AXELAR_HELPER")]).help(
@@ -484,13 +415,15 @@ abstract contract Setup is Test {
             return uint16(5);
         }
 
+        if(_chainId == AVA_CHAIN_ID) {
+            return uint16(6);
+        }
+
         return 0;
     }
 
     /// @dev returns the chain id of axelar for local chain id
-    function _axelarChainId(
-        uint256 _chainId
-    ) internal pure returns (string memory) {
+    function _axelarChainId(uint256 _chainId) internal pure returns (string memory) {
         if (_chainId == ETHEREUM_CHAIN_ID) {
             return "ethereum";
         }
@@ -503,13 +436,15 @@ abstract contract Setup is Test {
             return "polygon";
         }
 
+        if(_chainId == AVA_CHAIN_ID) {
+            return "avalanche";
+        }
+
         return "";
     }
 
     /// @dev returns the relayer of wormhole for chain id
-    function _wormholeRelayer(
-        uint256 _chainId
-    ) internal pure returns (address) {
+    function _wormholeRelayer(uint256 _chainId) internal pure returns (address) {
         if (_chainId == ETHEREUM_CHAIN_ID) {
             return ETH_RELAYER;
         }
@@ -520,6 +455,10 @@ abstract contract Setup is Test {
 
         if (_chainId == POLYGON_CHAIN_ID) {
             return POLYGON_RELAYER;
+        }
+
+        if(_chainId == AVA_CHAIN_ID) {
+            return AVA_RELAYER;
         }
 
         return address(0);
@@ -539,67 +478,42 @@ abstract contract Setup is Test {
             return POLYGON_GATEWAY;
         }
 
+        if(_chainId == AVA_CHAIN_ID) {
+            return AVA_GATEWAY;
+        }
+
         return address(0);
     }
 
     /// @dev gets the message id from msg logs
-    function _getMsgId(
-        Vm.Log[] memory logs
-    ) internal pure returns (bytes32 msgId) {
+    function _getMsgId(Vm.Log[] memory logs) internal pure returns (bytes32 msgId) {
         for (uint256 i; i < logs.length; i++) {
-            if (
-                logs[i].topics[0] ==
-                keccak256(
-                    "BridgeMessageReceived(bytes32,string,uint256,address)"
-                )
-            ) {
+            if (logs[i].topics[0] == keccak256("BridgeMessageReceived(bytes32,string,uint256,address)")) {
                 msgId = logs[i].topics[1];
             }
         }
     }
 
     /// @dev get execute tx info from logs
-    function _getExecParams(
-        Vm.Log[] memory logs
-    )
+    function _getExecParams(Vm.Log[] memory logs)
         internal
         pure
-        returns (
-            uint256 txId,
-            address finalTarget,
-            uint256 value,
-            bytes memory data,
-            uint256 eta
-        )
+        returns (uint256 txId, address finalTarget, uint256 value, bytes memory data, uint256 eta)
     {
         bytes memory encodedArgs;
 
         for (uint256 j; j < logs.length; j++) {
-            if (
-                logs[j].topics[0] ==
-                keccak256(
-                    "TransactionScheduled(uint256,address,uint256,bytes,uint256)"
-                )
-            ) {
+            if (logs[j].topics[0] == keccak256("TransactionScheduled(uint256,address,uint256,bytes,uint256)")) {
                 txId = uint256(logs[j].topics[1]);
-                finalTarget = abi.decode(
-                    bytes.concat(logs[j].topics[2]),
-                    (address)
-                );
+                finalTarget = abi.decode(bytes.concat(logs[j].topics[2]), (address));
                 encodedArgs = logs[j].data;
-                (value, data, eta) = abi.decode(
-                    encodedArgs,
-                    (uint256, bytes, uint256)
-                );
+                (value, data, eta) = abi.decode(encodedArgs, (uint256, bytes, uint256));
             }
         }
     }
 
     // @dev sorts two adapters
-    function _sortTwoAdapters(
-        address adapterA,
-        address adapterB
-    ) internal pure returns (address[] memory adapters) {
+    function _sortTwoAdapters(address adapterA, address adapterB) internal pure returns (address[] memory adapters) {
         adapters = new address[](2);
         if (adapterA < adapterB) {
             adapters[0] = adapterA;
@@ -611,12 +525,11 @@ abstract contract Setup is Test {
     }
 
     // @dev sorts two adapters with fees
-    function _sortTwoAdaptersWithFees(
-        address adapterA,
-        address adapterB,
-        uint256 feeA,
-        uint256 feeB
-    ) internal pure returns (address[] memory adapters, uint256[] memory fees) {
+    function _sortTwoAdaptersWithFees(address adapterA, address adapterB, uint256 feeA, uint256 feeB)
+        internal
+        pure
+        returns (address[] memory adapters, uint256[] memory fees)
+    {
         adapters = new address[](2);
         fees = new uint256[](2);
         if (adapterA < adapterB) {
@@ -640,15 +553,7 @@ abstract contract Setup is Test {
         uint256 feeB,
         bool opA,
         bool opB
-    )
-        internal
-        pure
-        returns (
-            address[] memory adapters,
-            uint256[] memory fees,
-            bool[] memory ops
-        )
-    {
+    ) internal pure returns (address[] memory adapters, uint256[] memory fees, bool[] memory ops) {
         adapters = new address[](2);
         fees = new uint256[](2);
         ops = new bool[](2);
@@ -669,83 +574,28 @@ abstract contract Setup is Test {
         }
     }
 
-    function _sortThreeAdaptersWithFeesAndOps(
-        address[] memory _adapters,
-        uint256[] memory _fees,
-        bool[] memory _ops
-    )
+    function _sortThreeAdaptersWithFeesAndOps(address[] memory _adapters, uint256[] memory _fees, bool[] memory _ops)
         internal
         pure
-        returns (
-            address[] memory sortedAdapters,
-            uint256[] memory sortedFees,
-            bool[] memory sortedOps
-        )
+        returns (address[] memory sortedAdapters, uint256[] memory sortedFees, bool[] memory sortedOps)
     {
-        require(
-            _adapters.length == 3 && _fees.length == 3 && _ops.length == 3,
-            "invalid params"
-        );
+        require(_adapters.length == 3 && _fees.length == 3 && _ops.length == 3, "invalid params");
 
         sortedAdapters = new address[](3);
         sortedFees = new uint256[](3);
         sortedOps = new bool[](3);
-        (
-            address[] memory s1Ads,
-            uint256[] memory s1Fees,
-            bool[] memory s1Ops
-        ) = _sortTwoAdaptersWithFeesAndOps(
-                _adapters[0],
-                _adapters[1],
-                _fees[0],
-                _fees[1],
-                _ops[0],
-                _ops[1]
-            );
+        (address[] memory s1Ads, uint256[] memory s1Fees, bool[] memory s1Ops) =
+            _sortTwoAdaptersWithFeesAndOps(_adapters[0], _adapters[1], _fees[0], _fees[1], _ops[0], _ops[1]);
         if (_adapters[2] > s1Ads[1]) {
-            (sortedAdapters[0], sortedAdapters[1], sortedAdapters[2]) = (
-                s1Ads[0],
-                s1Ads[1],
-                _adapters[2]
-            );
-            (sortedFees[0], sortedFees[1], sortedFees[2]) = (
-                s1Fees[0],
-                s1Fees[1],
-                _fees[2]
-            );
-            (sortedOps[0], sortedOps[1], sortedOps[2]) = (
-                s1Ops[0],
-                s1Ops[1],
-                _ops[2]
-            );
+            (sortedAdapters[0], sortedAdapters[1], sortedAdapters[2]) = (s1Ads[0], s1Ads[1], _adapters[2]);
+            (sortedFees[0], sortedFees[1], sortedFees[2]) = (s1Fees[0], s1Fees[1], _fees[2]);
+            (sortedOps[0], sortedOps[1], sortedOps[2]) = (s1Ops[0], s1Ops[1], _ops[2]);
         } else {
-            (
-                address[] memory s2Ads,
-                uint256[] memory s2Fees,
-                bool[] memory s2Ops
-            ) = _sortTwoAdaptersWithFeesAndOps(
-                    _adapters[2],
-                    s1Ads[0],
-                    _fees[2],
-                    s1Fees[0],
-                    _ops[2],
-                    s1Ops[0]
-                );
-            (sortedAdapters[0], sortedAdapters[1], sortedAdapters[2]) = (
-                s2Ads[0],
-                s2Ads[1],
-                s1Ads[1]
-            );
-            (sortedFees[0], sortedFees[1], sortedFees[2]) = (
-                s2Fees[0],
-                s2Fees[1],
-                s1Fees[1]
-            );
-            (sortedOps[0], sortedOps[1], sortedOps[2]) = (
-                s2Ops[0],
-                s2Ops[1],
-                s1Ops[1]
-            );
+            (address[] memory s2Ads, uint256[] memory s2Fees, bool[] memory s2Ops) =
+                _sortTwoAdaptersWithFeesAndOps(_adapters[2], s1Ads[0], _fees[2], s1Fees[0], _ops[2], s1Ops[0]);
+            (sortedAdapters[0], sortedAdapters[1], sortedAdapters[2]) = (s2Ads[0], s2Ads[1], s1Ads[1]);
+            (sortedFees[0], sortedFees[1], sortedFees[2]) = (s2Fees[0], s2Fees[1], s1Fees[1]);
+            (sortedOps[0], sortedOps[1], sortedOps[2]) = (s2Ops[0], s2Ops[1], s1Ops[1]);
         }
     }
 }
