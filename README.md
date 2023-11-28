@@ -4,7 +4,7 @@ A demonstration model for an xERC20 token, as outlined by [ERC-7281](https://www
 ## Introduction
 xERC20 addresses the challenges of fragmented liquidity across various blockchains and the risks associated with relying on a single Arbitrary Message Bridge (AMB). However, it faces limitations related to the minting and burning caps. To overcome these drawbacks, this model employs a combination of message bridges without any constraints, effectively resolving these issues on a broader level.
 
-![Diagram](https://github.com/lifinance/MMAxERC20/img/Flowchart.jpg)
+![Diagram](https://github.com/lifinance/MMAxERC20/blob/develop/img/Flowchart.jpg)
 
 ## Local Development
 
