@@ -35,7 +35,7 @@ contract xERC20 is IXERC20, ERC20 {
         mmaSender = IMultiMessageSender(_mmaSender);
         mmaReceiver = _mmaReceiver;
 
-        /// @dev mints 1 million tokens
+        // @dev mints 1 million tokens to initial owner
         _mint(_initialOwner, 1e24);
     }
 
@@ -45,24 +45,30 @@ contract xERC20 is IXERC20, ERC20 {
     {
         _burn(msg.sender, _amount);
 
-        /// assume CREATE2
-        /// assume msg has 29 day expiration
-        /// assume msg.sender as refund address
+        // assume CREATE2
+        // assume msg has 29 day expiration
+        // assume msg.sender as refund address
         mmaSender.remoteCall{value: msg.value}(
             _dstChainId, address(this), bytes(""), _amount, 29 days, msg.sender, _fees, 2, new address[](0)
         );
     }
 
-    function setLockbox(address _lockbox) external override {}
+    function setLockbox(address _lockbox) external override {
+        // no use case for now
+        revert();
+    }
 
-    function setLimits(address _bridge, uint256 _mintingLimit, uint256 _burningLimit) external override {}
+    function setLimits(address _bridge, uint256 _mintingLimit, uint256 _burningLimit) external override {
+        // no use case for now
+        revert();
+    }
 
     function mint(address _user, uint256 _amount) external override onlyMultiMessageReceiver {
         _mint(_user, _amount);
     }
 
     function burn(address _user, uint256 _amount) external override {
-        /// @notice no use case for now
+        // no use case for now
         revert();
     }
 
@@ -71,12 +77,16 @@ contract xERC20 is IXERC20, ERC20 {
         return type(uint256).max;
     }
 
-    function burningMaxLimitOf(address _bridge) external view override returns (uint256 _limit) {}
+    function burningMaxLimitOf(address _bridge) external view override returns (uint256 _limit) {
+        return 0;
+    }
 
     function mintingCurrentLimitOf(address _bridge) external view override returns (uint256 _limit) {
         if (_bridge != mmaReceiver) return 0;
         return type(uint256).max;
     }
 
-    function burningCurrentLimitOf(address _bridge) external view override returns (uint256 _limit) {}
+    function burningCurrentLimitOf(address _bridge) external view override returns (uint256 _limit) {
+        return 0;
+    }
 }

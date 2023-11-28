@@ -3,8 +3,6 @@ pragma solidity >=0.8.20;
 
 /// library imports
 import {Test, Vm} from "forge-std/Test.sol";
-import "forge-std/console.sol";
-
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 /// @dev imports from Pigeon Helper (Facilitate State Transfer Mocks)
@@ -201,7 +199,6 @@ abstract contract Setup is Test {
 
     /// @dev deploys the axelar adapters to all configured chains
     function _deployAxelarAdapters() internal {
-        console.log("deploying axelar adapters");
         uint256 len = ALL_CHAINS.length;
 
         /// @notice deploy receiver adapters to all DST_CHAINS
@@ -256,7 +253,6 @@ abstract contract Setup is Test {
                 ++j;
             }
         }
-        console.log("deploying axelar adapters complete");
     }
 
     /// @dev deploys the amb helpers to all configured chains
