@@ -411,7 +411,7 @@ abstract contract Setup is Test {
             return uint16(5);
         }
 
-        if(_chainId == AVA_CHAIN_ID) {
+        if (_chainId == AVA_CHAIN_ID) {
             return uint16(6);
         }
 
@@ -432,7 +432,7 @@ abstract contract Setup is Test {
             return "polygon";
         }
 
-        if(_chainId == AVA_CHAIN_ID) {
+        if (_chainId == AVA_CHAIN_ID) {
             return "avalanche";
         }
 
@@ -453,7 +453,7 @@ abstract contract Setup is Test {
             return POLYGON_RELAYER;
         }
 
-        if(_chainId == AVA_CHAIN_ID) {
+        if (_chainId == AVA_CHAIN_ID) {
             return AVA_RELAYER;
         }
 
@@ -474,7 +474,7 @@ abstract contract Setup is Test {
             return POLYGON_GATEWAY;
         }
 
-        if(_chainId == AVA_CHAIN_ID) {
+        if (_chainId == AVA_CHAIN_ID) {
             return AVA_GATEWAY;
         }
 

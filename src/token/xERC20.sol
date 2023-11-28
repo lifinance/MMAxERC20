@@ -29,9 +29,13 @@ contract xERC20 is IXERC20, ERC20 {
         _;
     }
 
-    constructor(string memory _name, string memory _symbol, address _initialOwner, address _mmaSender, address _mmaReceiver)
-        ERC20(_name, _symbol)
-    {
+    constructor(
+        string memory _name,
+        string memory _symbol,
+        address _initialOwner,
+        address _mmaSender,
+        address _mmaReceiver
+    ) ERC20(_name, _symbol) {
         mmaSender = IMultiMessageSender(_mmaSender);
         mmaReceiver = _mmaReceiver;
 
