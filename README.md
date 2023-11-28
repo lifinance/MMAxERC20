@@ -106,3 +106,6 @@ contracts
 
 ## License
 By contributing to the project, you agree that your contributions will be licensed under the project's [LICENSE](https://github.com/MultiMessageAggregation/multibridge/blob/main/LICENSE).
+
+## Disclaimer
+This is experimental software and is provided on an "as is" basis. Parts of the code are audited, but largely unaudited. No expressed or implied warranties are granted of any kind. I will not be liable for any loss, direct or indirect, related to the use or misuse of this codebase.
