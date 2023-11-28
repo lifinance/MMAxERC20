@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-pragma solidity >=0.8.9;
+pragma solidity >=0.8.20;
 
 /// library imports
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
@@ -38,6 +38,8 @@ contract MessageSenderGAC is GAC {
     address public authorisedCaller;
 
     mapping(uint256 chainId => address mmaReceiver) public remoteMultiBridgeMessageReceiver;
+
+    constructor(address _owner) GAC(_owner) {}
 
     /*///////////////////////////////////////////////////////////////
                           EXTERNAL FUNCTIONS

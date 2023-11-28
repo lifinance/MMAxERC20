@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-pragma solidity >=0.8.9;
+pragma solidity >=0.8.20;
 
 /**
  * @notice interface for governance timelock on the destination chain.

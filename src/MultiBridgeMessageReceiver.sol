@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
-pragma solidity >=0.8.9;
+pragma solidity >=0.8.20;
 
 /// interfaces
 import "./interfaces/controllers/IGAC.sol";
 import "./interfaces/adapters/IMessageReceiverAdapter.sol";
 import "./interfaces/IMultiBridgeMessageReceiver.sol";
 import "./libraries/EIP5164/ExecutorAware.sol";
-import "./interfaces/controllers/IGovernanceTimelock.sol";
+import "./interfaces/EIP7281/IXERC20.sol";
 
 /// libraries
 import "./libraries/Error.sol";
@@ -24,8 +24,6 @@ contract MultiBridgeMessageReceiver is IMultiBridgeMessageReceiver, ExecutorAwar
     using MessageLibrary for MessageLibrary.Message;
     using MessageLibrary for MessageLibrary.MessageExecutionParams;
 
-    /// @notice the id of the source chain that this contract can receive messages from
-    uint256 public immutable srcChainId;
     /// @notice the global access control contract
     IGAC public immutable gac;
 
@@ -36,8 +34,8 @@ contract MultiBridgeMessageReceiver is IMultiBridgeMessageReceiver, ExecutorAwar
     /// @notice minimum number of bridges that must deliver a message for it to be considered valid
     uint64 public quorum;
 
-    /// @notice the address of governance timelock contract on the same chain, that a message will be forwarded to for execution
-    address public governanceTimelock;
+    /// @notice the address of xERC20 token contract on the same chain, that a message will be forwarded to for execution
+    address public xERC20;
 
     /// @notice maintains which bridge adapters have delivered each message
     mapping(bytes32 msgId => mapping(address receiverAdapter => bool delivered)) public msgDeliveries;
@@ -76,15 +74,11 @@ contract MultiBridgeMessageReceiver is IMultiBridgeMessageReceiver, ExecutorAwar
     ////////////////////////////////////////////////////////////////*/
 
     /// @notice sets the initial parameters
-    constructor(uint256 _srcChainId, address _gac, address[] memory _receiverAdapters, uint64 _quorum) {
-        if (_srcChainId == 0) {
-            revert Error.INVALID_SENDER_CHAIN_ID();
-        }
+    constructor(address _gac, address[] memory _receiverAdapters, uint64 _quorum) {
         if (_gac == address(0)) {
             revert Error.ZERO_ADDRESS_INPUT();
         }
 
-        srcChainId = _srcChainId;
         gac = IGAC(_gac);
 
         for (uint256 i; i < _receiverAdapters.length;) {
@@ -109,10 +103,6 @@ contract MultiBridgeMessageReceiver is IMultiBridgeMessageReceiver, ExecutorAwar
 
         if (_message.target == address(0)) {
             revert Error.INVALID_TARGET();
-        }
-
-        if (_message.srcChainId != srcChainId) {
-            revert Error.INVALID_SENDER_CHAIN_ID();
         }
 
         /// this msgId is totally different with each adapters' internal msgId(which is their internal nonce essentially)
@@ -146,7 +136,7 @@ contract MultiBridgeMessageReceiver is IMultiBridgeMessageReceiver, ExecutorAwar
     }
 
     /// @inheritdoc IMultiBridgeMessageReceiver
-    function scheduleMessageExecution(bytes32 _msgId, MessageLibrary.MessageExecutionParams calldata _execParams)
+    function executeMessage(bytes32 _msgId, MessageLibrary.MessageExecutionParams calldata _execParams)
         external
         override
     {
@@ -173,24 +163,23 @@ contract MultiBridgeMessageReceiver is IMultiBridgeMessageReceiver, ExecutorAwar
         }
 
         /// @dev queues the action on timelock for execution
-        IGovernanceTimelock(governanceTimelock).scheduleTransaction(
-            _execParams.target, _execParams.value, _execParams.callData
-        );
+        IXERC20(xERC20).mint(_execParams.target, _execParams.value);
 
         emit MessageExecutionScheduled(
             _msgId, _execParams.target, _execParams.value, _execParams.nonce, _execParams.callData
         );
     }
 
-    /// @notice update the governance timelock contract.
-    /// @dev called by admin to update the timelock contract
-    function updateGovernanceTimelock(address _governanceTimelock) external onlyGlobalOwner {
-        if (_governanceTimelock == address(0)) {
+    /// @notice update the xERC20 contract.
+    /// @dev called by admin to update the xERC20 contract
+    function updateXERC20(address _xERC20) external onlyGlobalOwner {
+        if (_xERC20 == address(0)) {
             revert Error.ZERO_GOVERNANCE_TIMELOCK();
         }
-        address oldGovernanceTimelock = governanceTimelock;
-        governanceTimelock = _governanceTimelock;
-        emit GovernanceTimelockUpdated(oldGovernanceTimelock, _governanceTimelock);
+
+        address oldxERC20 = xERC20;
+        xERC20 = _xERC20;
+        emit xERC20Updated(oldxERC20, _xERC20);
     }
 
     /// @notice Update bridge receiver adapters.

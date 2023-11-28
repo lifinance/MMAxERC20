@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-pragma solidity >=0.8.9;
+pragma solidity >=0.8.20;
 
 /// interfaces
 import "./interfaces/adapters/IMessageSenderAdapter.sol";
@@ -160,7 +160,7 @@ contract MultiBridgeMessageSender {
         uint256[] calldata _fees,
         uint256 _successThreshold,
         address[] memory _excludedAdapters
-    ) external payable onlyCaller validateExpiration(_expiration) {
+    ) external payable validateExpiration(_expiration) {
         _remoteCall(
             RemoteCallArgs(
                 _dstChainId,

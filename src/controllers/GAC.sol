@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-pragma solidity >=0.8.9;
+pragma solidity >=0.8.20;
 
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
 
@@ -13,7 +13,7 @@ contract GAC is IGAC, Ownable {
     /*///////////////////////////////////////////////////////////////
                             CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
-    constructor() Ownable() {}
+    constructor(address _owner) Ownable(_owner) {}
 
     /*///////////////////////////////////////////////////////////////
                         EXTERNAL VIEW FUNCTIONS

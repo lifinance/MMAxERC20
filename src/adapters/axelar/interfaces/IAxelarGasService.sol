@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-pragma solidity >=0.8.9;
+pragma solidity >=0.8.20;
 
 // This should be owned by the microservice that is paying for gas.
 interface IAxelarGasService {

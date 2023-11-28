@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-pragma solidity >=0.8.9;
+pragma solidity >=0.8.20;
 
 /// local imports
 import "../BaseSenderAdapter.sol";
@@ -17,18 +17,20 @@ contract AxelarSenderAdapter is BaseSenderAdapter {
 
     string public constant name = "AXELAR";
 
-    IAxelarGateway public immutable gateway;
+    IAxelarGateway public gateway;
+    IAxelarGasService public gasService;
 
     /*/////////////////////////////////////////////////////////////////
                             STATE VARIABLES
     ////////////////////////////////////////////////////////////////*/
-    IAxelarGasService public immutable gasService;
     mapping(uint256 => string) public chainIdMap;
 
     /*/////////////////////////////////////////////////////////////////
                                 CONSTRUCTOR
     ////////////////////////////////////////////////////////////////*/
-    constructor(address _gasService, address _gateway, address _gac) BaseSenderAdapter(_gac) {
+    constructor(address _gac) BaseSenderAdapter(_gac) {}
+
+    function setAxelarConfig(address _gasService, address _gateway) external onlyGlobalOwner {
         if (_gasService == address(0) || _gateway == address(0)) {
             revert Error.ZERO_ADDRESS_INPUT();
         }
