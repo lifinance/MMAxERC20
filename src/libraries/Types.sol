@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
-
 pragma solidity >=0.8.20;
 
 struct AdapterPayload {
     bytes32 msgId;
-    address senderAdapterCaller;
+    address senderAdapter;
     address receiverAdapter;
-    address finalDestination;
+    address to;
     bytes data;
 }

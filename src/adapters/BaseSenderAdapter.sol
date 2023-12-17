@@ -18,13 +18,6 @@ abstract contract BaseSenderAdapter is IMessageSenderAdapter {
     /*/////////////////////////////////////////////////////////////////
                                  MODIFIER
     ////////////////////////////////////////////////////////////////*/
-    modifier onlyMultiBridgeMessageSender() {
-        if (msg.sender != senderGAC.multiBridgeMessageSender()) {
-            revert Error.CALLER_NOT_MULTI_MESSAGE_SENDER();
-        }
-        _;
-    }
-
     modifier onlyGlobalOwner() {
         if (!senderGAC.isGlobalOwner(msg.sender)) {
             revert Error.CALLER_NOT_OWNER();

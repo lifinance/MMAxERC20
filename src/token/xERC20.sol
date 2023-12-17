@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.8.13;
 
 /// library imports
@@ -5,6 +6,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// local imports
 import {IXERC20} from "src/interfaces/EIP7281/IXERC20.sol";
+import {IMessageSenderAdapter} from "src/interfaces/adapters/IMessageSenderAdapter.sol";
 
 interface IMultiMessageSender {
     function remoteCall(
@@ -21,6 +23,8 @@ interface IMultiMessageSender {
 }
 
 contract xERC20 is IXERC20, ERC20 {
+    uint256 public constant MULTI_BRIDGE_ID = 1;
+
     IMultiMessageSender public mmaSender;
     address public mmaReceiver;
 
@@ -28,6 +32,8 @@ contract xERC20 is IXERC20, ERC20 {
         require(msg.sender == address(mmaReceiver), "xERC20: invalid caller");
         _;
     }
+
+    mapping(uint256 bridgeId => address bridge) public bridgeAddress;
 
     constructor(
         string memory _name,
@@ -43,18 +49,27 @@ contract xERC20 is IXERC20, ERC20 {
         _mint(_initialOwner, 1e24);
     }
 
-    function xChainTransfer(uint256 _dstChainId, uint256[] calldata _fees, address _receiver, uint256 _amount)
-        external
-        payable
-    {
+    function xChainTransfer(
+        uint256 _dstChainId,
+        uint256 _bridgeId,
+        uint256[] calldata _fees,
+        address _receiver,
+        uint256 _amount
+    ) external payable {
         _burn(msg.sender, _amount);
 
-        // assume CREATE2
-        // assume msg has 29 day expiration
-        // assume msg.sender as refund address
-        mmaSender.remoteCall{value: msg.value}(
-            _dstChainId, address(this), bytes(""), _amount, 29 days, msg.sender, _fees, 2, new address[](0)
-        );
+        if (_bridgeId == MULTI_BRIDGE_ID) {
+            // assume CREATE2
+            // assume msg has 29 day expiration
+            // assume msg.sender as refund address
+            mmaSender.remoteCall{value: msg.value}(
+                _dstChainId, address(this), bytes(""), _amount, 29 days, msg.sender, _fees, 2, new address[](0)
+            );
+        } else {
+            IMessageSenderAdapter(bridgeAddress[_bridgeId]).dispatchMessage{value: msg.value}(
+                _dstChainId, address(this), abi.encode(_receiver, _amount)
+            );
+        }
     }
 
     function setLockbox(address _lockbox) external override {

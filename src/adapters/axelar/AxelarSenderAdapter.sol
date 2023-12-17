@@ -51,7 +51,6 @@ contract AxelarSenderAdapter is BaseSenderAdapter {
         external
         payable
         override
-        onlyMultiBridgeMessageSender
         returns (bytes32 msgId)
     {
         address receiverAdapter = receiverAdapters[_receiverChainId];
@@ -106,18 +105,17 @@ contract AxelarSenderAdapter is BaseSenderAdapter {
     /// @param _destinationChain The name of the destination chain.
     /// @param _receiverAdapter The address of the adapter on the destination chain that will receive the message.
     /// @param _msgId The ID of the message to be relayed.
-    /// @param _multibridgeReceiver The address of the MultibridgeReceiver contract on the destination chain that will receive the message.
+    /// @param _to The address of the MultibridgeReceiver contract on the destination chain that will receive the message.
     /// @param _data The bytes data to pass to the contract on the destination chain.
     function _callContract(
         string memory _destinationChain,
         address _receiverAdapter,
         bytes32 _msgId,
-        address _multibridgeReceiver,
+        address _to,
         bytes calldata _data
     ) internal {
         string memory receiverAdapterInString = StringAddressConversion.toString(_receiverAdapter);
-        bytes memory payload =
-            abi.encode(AdapterPayload(_msgId, address(msg.sender), _receiverAdapter, _multibridgeReceiver, _data));
+        bytes memory payload = abi.encode(AdapterPayload(_msgId, address(msg.sender), _receiverAdapter, _to, _data));
 
         gasService.payNativeGasForContractCall{value: msg.value}(
             msg.sender, _destinationChain, receiverAdapterInString, payload, msg.sender

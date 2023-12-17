@@ -42,7 +42,6 @@ contract WormholeSenderAdapter is BaseSenderAdapter {
         external
         payable
         override
-        onlyMultiBridgeMessageSender
         returns (bytes32 msgId)
     {
         address receiverAdapter = receiverAdapters[_receiverChainId];

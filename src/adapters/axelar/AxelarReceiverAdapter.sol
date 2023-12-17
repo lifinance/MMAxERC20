@@ -80,19 +80,16 @@ contract AxelarReceiverAdapter is BaseReceiverAdapter, IAxelarExecutable {
             revert Error.INVALID_RECEIVER_ADAPTER();
         }
 
-        /// @dev step-5: validate the destination
-        // if (decodedPayload.finalDestination != receiverGAC.multiBridgeMsgReceiver()) {
-        //     revert Error.INVALID_FINAL_DESTINATION();
-        // }
-
         isMessageExecuted[msgId] = true;
         commandIdStatus[_commandId] = true;
 
         MessageLibrary.Message memory _data = abi.decode(decodedPayload.data, (MessageLibrary.Message));
 
-        try IMultiBridgeMessageReceiver(receiverGAC.multiBridgeMsgReceiver()).receiveMessage(_data) {
-            emit MessageIdExecuted(_data.srcChainId, msgId);
-        } catch (bytes memory lowLevelData) {
+        (bool success, bytes memory lowLevelData) = decodedPayload.to.call{value: msg.value}(decodedPayload.data);
+
+        if (success) {
+            MessageIdExecuted(msgId);
+        } else {
             revert MessageFailure(msgId, lowLevelData);
         }
     }

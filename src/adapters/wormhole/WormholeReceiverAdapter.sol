@@ -92,16 +92,11 @@ contract WormholeReceiverAdapter is BaseReceiverAdapter, IWormholeReceiver {
             revert Error.INVALID_RECEIVER_ADAPTER();
         }
 
-        /// @dev step-4: validate the destination
-        if (decodedPayload.finalDestination != receiverGAC.multiBridgeMsgReceiver()) {
-            revert Error.INVALID_FINAL_DESTINATION();
-        }
+        (bool success, bytes memory lowLevelData) = decodedPayload.to.call{value: msg.value}(decodedPayload.data);
 
-        MessageLibrary.Message memory _data = abi.decode(decodedPayload.data, (MessageLibrary.Message));
-
-        try IMultiBridgeMessageReceiver(decodedPayload.finalDestination).receiveMessage(_data) {
-            emit MessageIdExecuted(_data.srcChainId, msgId);
-        } catch (bytes memory lowLevelData) {
+        if (success) {
+            MessageIdExecuted(msgId);
+        } else {
             revert MessageFailure(msgId, lowLevelData);
         }
     }

@@ -35,5 +35,5 @@ interface MessageExecutor {
     /**
      * @dev MessageIdExecuted MUST be emitted once a message or message batch has been executed.
      */
-    event MessageIdExecuted(uint256 indexed fromChainId, bytes32 indexed messageId);
+    event MessageIdExecuted(bytes32 indexed messageId);
 }
