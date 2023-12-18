@@ -37,7 +37,7 @@ contract SimpleTransferTest is Setup {
         vm.recordLogs();
         uint256 expiration = block.timestamp + 29 days;
         xERC20(contractAddress[SRC_CHAIN_ID][bytes("XERC20")]).xChainTransfer{value: 1 ether + wormholeFee}(
-            DST_CHAIN_ID, _fees, owner, 1e18
+            DST_CHAIN_ID, 1, owner, 1e18, abi.encode(_fees)
         );
         Vm.Log[] memory logs = vm.getRecordedLogs();
         vm.stopPrank();
@@ -76,7 +76,7 @@ contract SimpleTransferTest is Setup {
         vm.recordLogs();
         uint256 expiration = block.timestamp + 29 days;
         xERC20(contractAddress[DST_CHAIN_ID][bytes("XERC20")]).xChainTransfer{value: 1 ether + wormholeFee}(
-            SRC_CHAIN_ID, _fees, owner, 1e18
+            SRC_CHAIN_ID, 1, owner, 1e18, abi.encode(_fees)
         );
         Vm.Log[] memory logs = vm.getRecordedLogs();
         vm.stopPrank();

@@ -95,7 +95,7 @@ contract WormholeReceiverAdapter is BaseReceiverAdapter, IWormholeReceiver {
         (bool success, bytes memory lowLevelData) = decodedPayload.to.call{value: msg.value}(decodedPayload.data);
 
         if (success) {
-            MessageIdExecuted(msgId);
+            emit MessageIdExecuted(msgId);
         } else {
             revert MessageFailure(msgId, lowLevelData);
         }

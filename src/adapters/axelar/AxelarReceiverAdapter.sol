@@ -85,10 +85,10 @@ contract AxelarReceiverAdapter is BaseReceiverAdapter, IAxelarExecutable {
 
         MessageLibrary.Message memory _data = abi.decode(decodedPayload.data, (MessageLibrary.Message));
 
-        (bool success, bytes memory lowLevelData) = decodedPayload.to.call{value: msg.value}(decodedPayload.data);
+        (bool success, bytes memory lowLevelData) = decodedPayload.to.call(decodedPayload.data);
 
         if (success) {
-            MessageIdExecuted(msgId);
+            emit MessageIdExecuted(msgId);
         } else {
             revert MessageFailure(msgId, lowLevelData);
         }
