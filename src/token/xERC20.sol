@@ -59,12 +59,21 @@ contract xERC20 is IXERC20, ERC20 {
         _burn(msg.sender, _amount);
 
         if (_bridgeId == MULTI_BRIDGE_ID) {
-            uint256[] memory bridgeFees = abi.decode(_bridgeFee, (uint256[]));
             // assume CREATE2
             // assume msg has 29 day expiration
             // assume msg.sender as refund address
+
+            uint256[] memory bridgeFees = abi.decode(_bridgeFee, (uint256[]));
             mmaSender.remoteCall{value: msg.value}(
-                _dstChainId, address(this), bytes(""), _amount, 29 days, msg.sender, bridgeFees, 2, new address[](0)
+                _dstChainId,
+                mmaReceiver,
+                abi.encode(_receiver, _amount),
+                0,
+                29 days,
+                msg.sender,
+                bridgeFees,
+                2,
+                new address[](0)
             );
         } else {
             uint256 bridgeFee = abi.decode(_bridgeFee, (uint256));

@@ -266,9 +266,7 @@ contract MultiBridgeMessageSender {
             _args.dstChainId,
             _args.target,
             nonce,
-            _args.callData,
-            _args.nativeValue,
-            block.timestamp + _args.expiration
+            _args.callData
         );
         bytes32 msgId = message.computeMsgId();
         (bool[] memory adapterSuccess, uint256 successCount) =

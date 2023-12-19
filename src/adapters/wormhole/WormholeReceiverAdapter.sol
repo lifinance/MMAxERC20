@@ -7,6 +7,7 @@ import "wormhole-solidity-sdk/interfaces/IWormholeReceiver.sol";
 /// local imports
 import "../../interfaces/adapters/IMessageReceiverAdapter.sol";
 import "../../interfaces/IMultiBridgeMessageReceiver.sol";
+import "../../interfaces/EIP7281/IXERC20.sol";
 import "../../libraries/Error.sol";
 import "../../libraries/Types.sol";
 import "../../libraries/TypeCasts.sol";
@@ -92,12 +93,22 @@ contract WormholeReceiverAdapter is BaseReceiverAdapter, IWormholeReceiver {
             revert Error.INVALID_RECEIVER_ADAPTER();
         }
 
-        (bool success, bytes memory lowLevelData) = decodedPayload.to.call{value: msg.value}(decodedPayload.data);
+        address mmaReceiver = receiverGAC.multiBridgeMsgReceiver();
 
-        if (success) {
-            emit MessageIdExecuted(msgId);
+        if (decodedPayload.to == mmaReceiver) {
+            MessageLibrary.Message memory _data = abi.decode(decodedPayload.data, (MessageLibrary.Message));
+            try IMultiBridgeMessageReceiver(mmaReceiver).receiveMessage(_data) {
+                emit MessageIdExecuted(msgId);
+            } catch (bytes memory lowLevelData) {
+                revert MessageFailure(msgId, lowLevelData);
+            }
         } else {
-            revert MessageFailure(msgId, lowLevelData);
+            (address user, uint256 amount) = abi.decode(decodedPayload.data, (address, uint256));
+            try IXERC20(decodedPayload.to).mint(user, amount) {
+                emit MessageIdExecuted(msgId);
+            } catch (bytes memory lowLevelData) {
+                revert MessageFailure(msgId, lowLevelData);
+            }
         }
     }
 }

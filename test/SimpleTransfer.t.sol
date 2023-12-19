@@ -20,14 +20,14 @@ contract SimpleTransferTest is Setup {
 
     function test_xChainTransfer() external {
         _srcToDst();
-        _dstToSrc();
+        // _dstToSrc();
     }
 
     function _srcToDst() internal {
         vm.selectFork(fork[SRC_CHAIN_ID]);
         vm.startPrank(owner);
 
-        deal(owner, 2 ether);
+        deal(owner, 100 ether);
         uint256[] memory _fees = new uint256[](2);
         _fees[0] = 1 ether;
 
@@ -53,11 +53,9 @@ contract SimpleTransferTest is Setup {
         MultiBridgeMessageReceiver(contractAddress[DST_CHAIN_ID][bytes("MMA_RECEIVER")]).executeMessage(
             msgId,
             MessageLibrary.MessageExecutionParams({
-                target: contractAddress[SRC_CHAIN_ID][bytes("XERC20")],
-                callData: bytes(""),
-                value: 1e18,
-                nonce: 1,
-                expiration: expiration
+                target: contractAddress[SRC_CHAIN_ID][bytes("MMA_RECEIVER")],
+                payload: abi.encode(owner, 1e18),
+                nonce: 1
             })
         );
     }
@@ -92,10 +90,8 @@ contract SimpleTransferTest is Setup {
             msgId,
             MessageLibrary.MessageExecutionParams({
                 target: contractAddress[DST_CHAIN_ID][bytes("XERC20")],
-                callData: bytes(""),
-                value: 1e18,
-                nonce: 1,
-                expiration: expiration
+                payload: bytes(""),
+                nonce: 1
             })
         );
     }

@@ -145,11 +145,6 @@ contract MultiBridgeMessageReceiver is IMultiBridgeMessageReceiver, ExecutorAwar
             revert Error.EXEC_PARAMS_HASH_MISMATCH();
         }
 
-        /// @dev validates if msg execution is not beyond expiration
-        if (block.timestamp > _execParams.expiration) {
-            revert Error.MSG_EXECUTION_PASSED_DEADLINE();
-        }
-
         /// @dev checks if msgId was already sent to the timelock for eventual execution
         if (isExecutionScheduled[_msgId]) {
             revert Error.MSG_ID_ALREADY_SCHEDULED();
@@ -162,11 +157,12 @@ contract MultiBridgeMessageReceiver is IMultiBridgeMessageReceiver, ExecutorAwar
             revert Error.QUORUM_NOT_ACHIEVED();
         }
 
+        (address user, uint256 amount) = abi.decode(_execParams.payload, (address, uint256));
         /// @dev queues the action on timelock for execution
-        IXERC20(xERC20).mint(_execParams.target, _execParams.value);
+        IXERC20(xERC20).mint(user, amount);
 
         emit MessageExecutionScheduled(
-            _msgId, _execParams.target, _execParams.value, _execParams.nonce, _execParams.callData
+            _msgId, _execParams.target, _execParams.nonce, _execParams.payload
         );
     }
 

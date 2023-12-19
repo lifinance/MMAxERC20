@@ -17,11 +17,10 @@ interface IMultiBridgeMessageReceiver {
     /// @notice emitted when a message has been queued for execution in the destination timelock contract.
     /// @param msgId is the unique identifier of the message
     /// @param target is the address of the final target address that will be called once the timelock matures
-    /// @param nativeValue is the value that will be passed to the target address through low-level call
     /// @param nonce is the nonce of the message
     /// @param callData is the data that will be passed to the target address through low-level call
     event MessageExecutionScheduled(
-        bytes32 indexed msgId, address indexed target, uint256 nativeValue, uint256 nonce, bytes callData
+        bytes32 indexed msgId, address indexed target, uint256 nonce, bytes callData
     );
 
     /// @notice emitted when receiver adapter of a specific bridge is updated.
