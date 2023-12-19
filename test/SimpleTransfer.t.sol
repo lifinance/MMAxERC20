@@ -19,11 +19,12 @@ contract SimpleTransferTest is Setup {
     }
 
     function test_xChainTransfer() external {
-        _srcToDst();
+        _srcToDstMMA();
+        _srcToDstWormhole();
         // _dstToSrc();
     }
 
-    function _srcToDst() internal {
+    function _srcToDstMMA() internal {
         vm.selectFork(fork[SRC_CHAIN_ID]);
         vm.startPrank(owner);
 
@@ -35,7 +36,6 @@ contract SimpleTransferTest is Setup {
         _fees[1] = wormholeFee;
 
         vm.recordLogs();
-        uint256 expiration = block.timestamp + 29 days;
         xERC20(contractAddress[SRC_CHAIN_ID][bytes("XERC20")]).xChainTransfer{value: 1 ether + wormholeFee}(
             DST_CHAIN_ID, 1, owner, 1e18, abi.encode(_fees)
         );
@@ -60,6 +60,24 @@ contract SimpleTransferTest is Setup {
         );
     }
 
+    function _srcToDstWormhole() internal {
+        vm.selectFork(fork[SRC_CHAIN_ID]);
+        vm.startPrank(owner);
+
+        deal(owner, 100 ether);
+        (uint256 wormholeFee,) = IWormholeRelayer(POLYGON_RELAYER).quoteEVMDeliveryPrice(6, 0, 300000);
+
+        vm.recordLogs();
+        xERC20(contractAddress[SRC_CHAIN_ID][bytes("XERC20")]).xChainTransfer{value: wormholeFee}(
+            DST_CHAIN_ID, 2, owner, 1e18, abi.encode(wormholeFee)
+        );
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        vm.stopPrank();
+
+        vm.recordLogs();
+        _simulatePayloadDelivery(SRC_CHAIN_ID, DST_CHAIN_ID, logs);
+    }
+
     function _dstToSrc() internal {
         vm.selectFork(fork[DST_CHAIN_ID]);
         vm.startPrank(owner);
@@ -72,7 +90,6 @@ contract SimpleTransferTest is Setup {
         _fees[1] = wormholeFee;
 
         vm.recordLogs();
-        uint256 expiration = block.timestamp + 29 days;
         xERC20(contractAddress[DST_CHAIN_ID][bytes("XERC20")]).xChainTransfer{value: 1 ether + wormholeFee}(
             SRC_CHAIN_ID, 1, owner, 1e18, abi.encode(_fees)
         );

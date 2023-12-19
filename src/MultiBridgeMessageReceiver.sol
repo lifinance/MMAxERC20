@@ -161,9 +161,7 @@ contract MultiBridgeMessageReceiver is IMultiBridgeMessageReceiver, ExecutorAwar
         /// @dev queues the action on timelock for execution
         IXERC20(xERC20).mint(user, amount);
 
-        emit MessageExecutionScheduled(
-            _msgId, _execParams.target, _execParams.nonce, _execParams.payload
-        );
+        emit MessageExecutionScheduled(_msgId, _execParams.target, _execParams.nonce, _execParams.payload);
     }
 
     /// @notice update the xERC20 contract.

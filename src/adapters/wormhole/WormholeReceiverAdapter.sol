@@ -67,7 +67,7 @@ contract WormholeReceiverAdapter is BaseReceiverAdapter, IWormholeReceiver {
         bytes memory _payload,
         bytes[] memory,
         bytes32 _sourceAddress,
-        uint16 _sourceChainId,
+        uint16,
         bytes32 _deliveryHash
     ) public payable override onlyRelayerContract {
         /// @dev step-1: validate the source address

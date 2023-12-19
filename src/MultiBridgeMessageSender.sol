@@ -26,9 +26,6 @@ contract MultiBridgeMessageSender {
         uint256 dstChainId;
         address target;
         bytes callData;
-        uint256 nativeValue;
-        uint256 expiration;
-        address refundAddress;
         uint256[] fees;
         uint256 successThreshold;
         address[] excludedAdapters;
@@ -68,8 +65,6 @@ contract MultiBridgeMessageSender {
     /// @param dstChainId is the destination chain id of the message
     /// @param target is the target execution address on the destination chain
     /// @param callData is the data to be sent to _target by low-level call(eg. address(_target).call(_callData))
-    /// @param nativeValue is the value to be sent to _target by low-level call (eg. address(_target).call{value: _nativeValue}(_callData))
-    /// @param expiration refers to the number seconds that a message remains valid before it is considered stale and can no longer be executed.
     /// @param senderAdapters are the sender adapters that were used to send the message
     /// @param adapterSuccess are the message sending success status for each of the corresponding adapters listed in senderAdapters
     event MultiBridgeMessageSent(
@@ -78,8 +73,6 @@ contract MultiBridgeMessageSender {
         uint256 indexed dstChainId,
         address indexed target,
         bytes callData,
-        uint256 nativeValue,
-        uint256 expiration,
         address[] senderAdapters,
         bool[] adapterSuccess
     );
@@ -143,9 +136,6 @@ contract MultiBridgeMessageSender {
     /// @param _dstChainId is the destination chainId
     /// @param _target is the target execution point on the destination chain
     /// @param _callData is the data to be sent to _target by low-level call(eg. address(_target).call(_callData))
-    /// @param _nativeValue is the value to be sent to _target by low-level call (eg. address(_target).call{value: _nativeValue}(_callData))
-    /// @param _expiration refers to the number of seconds that a message remains valid before it is considered stale and can no longer be executed.
-    /// @param _refundAddress refers to the refund address for any extra native tokens paid
     /// @param _fees refers to the fees to pay to each sender adapter that is not in the exclusion list specified by _excludedAdapters.
     ///         The fees are in the same order as the sender adapters in the senderAdapters list, after the exclusion list is applied.
     /// @param _successThreshold specifies the minimum number of bridges that must successfully dispatch the message for this call to succeed.
@@ -154,26 +144,11 @@ contract MultiBridgeMessageSender {
         uint256 _dstChainId,
         address _target,
         bytes calldata _callData,
-        uint256 _nativeValue,
-        uint256 _expiration,
-        address _refundAddress,
         uint256[] calldata _fees,
         uint256 _successThreshold,
         address[] memory _excludedAdapters
-    ) external payable validateExpiration(_expiration) {
-        _remoteCall(
-            RemoteCallArgs(
-                _dstChainId,
-                _target,
-                _callData,
-                _nativeValue,
-                _expiration,
-                _refundAddress,
-                _fees,
-                _successThreshold,
-                _excludedAdapters
-            )
-        );
+    ) external payable {
+        _remoteCall(RemoteCallArgs(_dstChainId, _target, _callData, _fees, _successThreshold, _excludedAdapters));
     }
 
     /// @notice Add bridge sender adapters
@@ -250,24 +225,14 @@ contract MultiBridgeMessageSender {
 
     function _remoteCall(RemoteCallArgs memory _args) private {
         (address mmaReceiver, address[] memory adapters) = _checkAndProcessArgs(
-            _args.dstChainId,
-            _args.target,
-            _args.refundAddress,
-            _args.successThreshold,
-            _args.fees,
-            _args.excludedAdapters
+            _args.dstChainId, _args.target, _args.successThreshold, _args.fees, _args.excludedAdapters
         );
 
         /// @dev increments nonce
         ++nonce;
 
-        MessageLibrary.Message memory message = MessageLibrary.Message(
-            block.chainid,
-            _args.dstChainId,
-            _args.target,
-            nonce,
-            _args.callData
-        );
+        MessageLibrary.Message memory message =
+            MessageLibrary.Message(block.chainid, _args.dstChainId, _args.target, nonce, _args.callData);
         bytes32 msgId = message.computeMsgId();
         (bool[] memory adapterSuccess, uint256 successCount) =
             _dispatchMessages(adapters, mmaReceiver, _args.dstChainId, message, _args.fees);
@@ -277,27 +242,18 @@ contract MultiBridgeMessageSender {
         }
 
         emit MultiBridgeMessageSent(
-            msgId,
-            nonce,
-            _args.dstChainId,
-            _args.target,
-            _args.callData,
-            _args.nativeValue,
-            _args.expiration,
-            adapters,
-            adapterSuccess
+            msgId, nonce, _args.dstChainId, _args.target, _args.callData, adapters, adapterSuccess
         );
 
         /// refund remaining fee
         if (address(this).balance > 0) {
-            _safeTransferETH(_args.refundAddress, address(this).balance);
+            _safeTransferETH(msg.sender, address(this).balance);
         }
     }
 
     function _checkAndProcessArgs(
         uint256 _dstChainId,
         address _target,
-        address _refundAddress,
         uint256 _successThreshold,
         uint256[] memory _fees,
         address[] memory _excludedAdapters
@@ -312,10 +268,6 @@ contract MultiBridgeMessageSender {
 
         if (_target == address(0)) {
             revert Error.INVALID_TARGET();
-        }
-
-        if (_refundAddress == address(0) || _refundAddress == address(this)) {
-            revert Error.INVALID_REFUND_ADDRESS();
         }
 
         mmaReceiver = senderGAC.remoteMultiBridgeMessageReceiver(_dstChainId);

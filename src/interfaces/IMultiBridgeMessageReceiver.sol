@@ -19,9 +19,7 @@ interface IMultiBridgeMessageReceiver {
     /// @param target is the address of the final target address that will be called once the timelock matures
     /// @param nonce is the nonce of the message
     /// @param callData is the data that will be passed to the target address through low-level call
-    event MessageExecutionScheduled(
-        bytes32 indexed msgId, address indexed target, uint256 nonce, bytes callData
-    );
+    event MessageExecutionScheduled(bytes32 indexed msgId, address indexed target, uint256 nonce, bytes callData);
 
     /// @notice emitted when receiver adapter of a specific bridge is updated.
     /// @param receiverAdapter is the new receiver adapter address

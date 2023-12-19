@@ -337,9 +337,26 @@ abstract contract Setup is Test {
             senderGAC.setAuthorisedCaller(contractAddress[chainId][bytes("XERC20")]);
             senderGAC.setGlobalMsgDeliveryGasLimit(300000);
 
+            xERC20(contractAddress[chainId][bytes("XERC20")]).setBridgeAddress(
+                2, contractAddress[chainId][bytes("WORMHOLE_SENDER_ADAPTER")]
+            );
+            xERC20(contractAddress[chainId][bytes("XERC20")]).setBridgeAddress(
+                3, contractAddress[chainId][bytes("AXELAR_SENDER_ADAPTER")]
+            );
+
+            xERC20(contractAddress[chainId][bytes("XERC20")]).setLimits(
+                contractAddress[chainId][bytes("MMA_RECEIVER")], type(uint256).max, type(uint256).max
+            );
+            xERC20(contractAddress[chainId][bytes("XERC20")]).setLimits(
+                contractAddress[chainId][bytes("WORMHOLE_RECEIVER_ADAPTER")], 1e20, 1e20
+            );
+            xERC20(contractAddress[chainId][bytes("XERC20")]).setLimits(
+                contractAddress[chainId][bytes("AXELAR_RECEIVER_ADAPTER")], 1e20, 1e20
+            );
+
             MultiBridgeMessageReceiver dstMMReceiver =
                 MultiBridgeMessageReceiver(contractAddress[chainId][bytes("MMA_RECEIVER")]);
-            dstMMReceiver.updateXERC20(contractAddress[chainId]["XERC20"]);
+            dstMMReceiver.updateXERC20(contractAddress[chainId][bytes("XERC20")]);
 
             MessageReceiverGAC receiverGAC = MessageReceiverGAC(contractAddress[chainId][bytes("RECEIVER_GAC")]);
             receiverGAC.setMultiBridgeMessageReceiver(address(dstMMReceiver));

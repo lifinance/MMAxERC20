@@ -34,27 +34,17 @@ library MessageLibrary {
     function computeMsgId(Message memory _message) internal pure returns (bytes32) {
         return keccak256(
             abi.encodePacked(
-                _message.srcChainId,
-                _message.dstChainId,
-                _message.nonce,
-                _message.target,
-                _message.payload
+                _message.srcChainId, _message.dstChainId, _message.nonce, _message.target, _message.payload
             )
         );
     }
 
     function extractExecutionParams(Message memory _message) internal pure returns (MessageExecutionParams memory) {
-        return MessageExecutionParams({
-            target: _message.target,
-            payload: _message.payload,
-            nonce: _message.nonce
-        });
+        return MessageExecutionParams({target: _message.target, payload: _message.payload, nonce: _message.nonce});
     }
 
     function computeExecutionParamsHash(MessageExecutionParams memory _params) internal pure returns (bytes32) {
-        return keccak256(
-            abi.encodePacked(_params.target, _params.payload, _params.nonce)
-        );
+        return keccak256(abi.encodePacked(_params.target, _params.payload, _params.nonce));
     }
 
     function computeExecutionParamsHash(Message memory _message) internal pure returns (bytes32) {
